@@ -3,11 +3,9 @@ import pyrogram.errors
 from botConfig import *
 from util_database import db_async, dbcommit_async
 
-NEW_MEMBER_WATCHING_LIST = {}
 
-
-async def galgroup_non_member_msg_abuse(client, message: pyrogram.types.Message):
-    app = global_var.app
+async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogram.types.Message):
+    app = client
     # logging.info(message)
     if message.reply_to_message:
         # see the msg replies to which another one as legal.
@@ -20,14 +18,10 @@ async def galgroup_non_member_msg_abuse(client, message: pyrogram.types.Message)
         return
 
     if message.service and message.service == pyrogram.enums.MessageServiceType.NEW_CHAT_MEMBERS:
-        logging.info(
-            f'🆕️ Message {message.id} is sent by service, {message.from_user.first_name} add to watching list')
-        NEW_MEMBER_WATCHING_LIST.update({message.from_user.id: message.chat.id})
-        await asyncio.sleep(6)
-        NEW_MEMBER_WATCHING_LIST.pop(message.from_user.id)
         return
 
-    if message.from_user.id in NEW_MEMBER_WATCHING_LIST and message.chat.id == NEW_MEMBER_WATCHING_LIST[message.from_user.id]:
+    if message.from_user.id in global_var.NEW_MEMBER_WATCHING_LIST and message.chat.id == \
+            global_var.NEW_MEMBER_WATCHING_LIST[message.from_user.id]:
         logging.info(f'⚠️ user {message.from_user.first_name} is in watching list, delete this message')
         await message.delete()
         return
@@ -35,7 +29,7 @@ async def galgroup_non_member_msg_abuse(client, message: pyrogram.types.Message)
         # logging.info(f'🔍 User {message.from_user.id} {message.from_user.first_name} sent message {message.id},'
     #            f' looking for common chats.')
 
-    if await check_common_chat(message.from_user.id, message.from_user.first_name, GALGROUP):
+    if await check_common_chat(message.from_user.id, message.from_user.first_name, GALGROUP, app):
         # logging.info(f'User {message.from_user.id} {message.from_user.first_name} is in the chat')
         pass
     else:
@@ -52,8 +46,7 @@ async def galgroup_non_member_msg_abuse(client, message: pyrogram.types.Message)
         await app.send_message(GALGROUP, text)
 
 
-async def check_common_chat(user_id, first_name, target_chat):
-    app = global_var.app
+async def check_common_chat(user_id, first_name, target_chat, app: pyrogram.Client):
     DB = global_var.DB
     # not querying api too much, check local db first
     # cursor = DB.execute('SELECT * FROM members WHERE userid=:target', {'target': user_id})

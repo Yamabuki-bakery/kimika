@@ -1,11 +1,16 @@
-import global_var, logging, re, asyncio
-from util_tg_operation import get_user_credit
+import asyncio
+import logging
+import re
+
+import pyrogram
+
 from botConfig import *
+from util_tg_operation import get_user_credit
 
 
-async def new_member_welcome(client, message):
-    app = global_var.app
-    DB = global_var.DB
+async def new_member_welcome(client: pyrogram.Client, message):
+    app = client
+    # DB = global_var.DB
     if message.chat.id != GALGROUP:
         return
     from_chat_id = message.chat.id
@@ -18,25 +23,25 @@ async def new_member_welcome(client, message):
     bot_score = 0
     # check if 3-none account
     credit_result = await get_user_credit(this_user_id)
-    if credit_result['photo']:
+    if credit_result.photo:
         pass
     else:
         bot_flags += '無頭. '
         bot_score += 1
 
-    if credit_result['username']:
+    if credit_result.username:
         pass
     else:
         bot_flags += '無@. '
         bot_score += 1
 
-    if credit_result['bio']:
+    if credit_result.bio:
         pass
     else:
         bot_flags += '無 Bio. '
         bot_score += 1
 
-    if credit_result['new_account']:
+    if credit_result.new_account:
         bot_flags += '新創號'
         bot_score += 1
 

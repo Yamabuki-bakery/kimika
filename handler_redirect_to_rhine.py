@@ -2,8 +2,8 @@ import logging, pyrogram, asyncio, global_var
 from util_tg_operation import get_sender_id
 
 
-async def redirect_to_rhine(client, message: pyrogram.types.Message):
-    app = global_var.app
+async def redirect_to_rhine(client: pyrogram.Client, message: pyrogram.types.Message):
+    app = client
     WAITING_REPLY = global_var.SMART_DEAL_WAITING_REPLY
     flag = '\U0001F440'
     resp2user = f'我知道有資源群和頻道，你要進嗎？我可以拉你進 {flag}'

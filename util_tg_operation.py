@@ -193,40 +193,45 @@ async def send_song(song_id: int, chat_id: int):
         logging.error("music.mp3 does not exist")
 
 
-async def get_user_credit(userid: int, chatid: int = None) -> dict:
+class MemberCredit:
+    valid: bool
+    photo: bool
+    new_account: bool
+    username: str | None
+    bio: str | None
+    joined_time: int
+    joined_time_readable: str
+    msg_count_before_24h: int
+
+
+async def get_user_credit(userid: int, chatid: int = None) -> MemberCredit:
     app = global_var.app
     DB = global_var.DB
-    result = {
-        'valid': True
-    }
+    result = MemberCredit()
+    result.valid = True
     user_info = await app.get_users(userid)
-    result.update({
-        'photo': True if user_info.photo else False,
-        'new_account': userid > 5000000000,
-        'username': user_info.username if user_info.username else None
-    })
+
+    result.photo = True if user_info.photo else False
+    result.new_account = userid > 5000000000
+    result.username = user_info.username if user_info.username else None
+
     if user_info.is_deleted:
-        result.update({'valid': False})
+        result.valid = False
 
     full_user_info = await app.invoke(functions.users.GetFullUser(id=await app.resolve_peer(userid)))
     # logging.info(full_user_info.full_user.about)
-    result.update({
-        'bio': full_user_info.full_user.about if full_user_info.full_user.about else None
-    })
+    result.bio = full_user_info.full_user.about if full_user_info.full_user.about else None
 
     if chatid and chatid < 0:
         try:  # in case the user is left or deleted
             chat_member_info = await app.get_chat_member(chat_id=chatid, user_id=userid)
-            result.update({
-                'joined_time': int(chat_member_info.joined_date.timestamp()),
-                'joined_time_readable': chat_member_info.joined_date.strftime('%d %b, %Y %H:%M')
-            })
+            result.joined_time = int(chat_member_info.joined_date.timestamp())
+            result.joined_time_readable = chat_member_info.joined_date.strftime('%d %b, %Y %H:%M')
+
         except pyrogram.errors.UserNotParticipant:
             logging.warning(f'[credit] the user {userid} is not in the group')
-            result.update({
-                'joined_time': int(time.time()),
-                'joined_time_readable': 'Unknown'
-            })
+            result.joined_time = int(time.time()),
+            result.joined_time_readable = 'Unknown'
 
         # A subroutine to find message count sent 1 day ago and older
         total_msg_count = await app.search_messages_count(chat_id=chatid, from_user=userid)
@@ -244,14 +249,10 @@ async def get_user_credit(userid: int, chatid: int = None) -> dict:
                 break
 
         msg_count_before_24h = total_msg_count - counted
-        result.update({
-            'msg_count_before_24h': msg_count_before_24h
-        })
+        result.msg_count_before_24h = msg_count_before_24h
     else:
-        result.update({
-            'joined_time': None,
-            'msg_count_before_24h': None
-        })
+        result.joined_time = 0
+        result.msg_count_before_24h = 0
 
     return result
 

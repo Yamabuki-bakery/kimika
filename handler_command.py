@@ -3,15 +3,16 @@ import logging
 import pyrogram
 import random
 import re
+import json
 
 import global_var
 from botConfig import *
-from util_tg_operation import speak, send_song
+from util_tg_operation import speak, send_song, get_user_credit
 import pyrogram.errors
 
 
-async def at_command(client, message: pyrogram.types.Message):
-    app = global_var.app
+async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
+    app = client
     DB = global_var.DB
     (reply_to_possibility, reply_to_msg_id) = (0.75, message.reply_to_message.id) if message.reply_to_message else (
         -1, None)
@@ -126,7 +127,7 @@ async def at_command(client, message: pyrogram.types.Message):
 
             credit_info = await get_user_credit(target_id, message.chat.id)
             debug_msg = (await speak(message.chat.id,
-                                     json.dumps(credit_info, indent=2, separators=(',', ': '), ensure_ascii=False)))[0]
+                                     json.dumps(credit_info.__dict__, indent=2, separators=(',', ': '), ensure_ascii=False)))[0]
             await asyncio.sleep(90)
             await app.delete_messages(message.chat.id, debug_msg.id)
         if command_list.index(command_called) == 9:  # wipe
@@ -170,11 +171,11 @@ async def at_command(client, message: pyrogram.types.Message):
 
                 # 檢查目標 credit message count 和 joined time
                 target_credit = await get_user_credit(target_id, message.chat.id)
-                if target_credit['msg_count_before_24h'] > 10:
+                if target_credit.msg_count_before_24h > 10:
                     await app.send_message(chat_id=message.chat.id, text='⛔️無法 Wipe：此人以前講過話，你可以嘗試 kick。')
                     raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 嘗試橄欖講過話的人')
 
-                if datetime.now() - datetime.fromtimestamp(target_credit['joined_time']) > timedelta(days=14):
+                if datetime.now() - datetime.fromtimestamp(target_credit.joined_time) > timedelta(days=14):
                     await app.send_message(chat_id=message.chat.id, text='⛔️無法 Wipe：此人屬於老群友，請聯絡管理員。')
                     raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 嘗試橄欖老群友')
 
@@ -185,7 +186,7 @@ async def at_command(client, message: pyrogram.types.Message):
 
                 resp_text = f'[🛑](tg://user?id={ESUONEGOV}) **New banned user**\n\n' \
                             f'**ID**: [{target_id}](tg://user?id={target_id})\n' \
-                            f'**User**: {"@" + target_credit["username"] if target_credit["username"] else "None"}\n\n' \
+                            f'**User**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
                             f'👋🏻 **Action**: Kicked with history wiped\n' \
                             f'🤔 **Reason**: Invoked by [{message.from_user.first_name}](tg://user?id={caller_id})'
 
@@ -236,7 +237,7 @@ async def at_command(client, message: pyrogram.types.Message):
 
                 # 檢查目標 joined time
                 target_credit = await get_user_credit(target_id, message.chat.id)
-                if datetime.now() - datetime.fromtimestamp(target_credit['joined_time']) > timedelta(days=14):
+                if datetime.now() - datetime.fromtimestamp(target_credit.joined_time) > timedelta(days=14):
                     await app.send_message(chat_id=message.chat.id, text='⛔️無法 kick：此人屬於老群友，請聯絡管理員。')
                     raise ValueError(f'[kick] 此人 {message.from_user.first_name} 嘗試橄欖老群友')
 
@@ -245,7 +246,7 @@ async def at_command(client, message: pyrogram.types.Message):
 
                 resp_text = f'[🛑](tg://user?id={ESUONEGOV}) **New banned user**\n\n' \
                             f'**ID**: [{target_id}](tg://user?id={target_id})\n' \
-                            f'**User**: {"@" + target_credit["username"] if target_credit["username"] else "None"}\n\n' \
+                            f'**User**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
                             f'👋🏻 **Action**: Kicked\n' \
                             f'🤔 **Reason**: Invoked by [{message.from_user.first_name}](tg://user?id={caller_id})'
 

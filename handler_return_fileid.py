@@ -1,9 +1,10 @@
-import pyrogram, global_var
+import pyrogram
+
 from botConfig import *
 
 
-async def return_file_id(client, message: pyrogram.types.Message):
-    app = global_var.app
+async def return_file_id(client: pyrogram.Client, message: pyrogram.types.Message):
+    app = client
     media_uri = ''
     # need to save to cache
     if (message.media and message.media != pyrogram.enums.MessageMediaType.WEB_PAGE) or message.forward_date:

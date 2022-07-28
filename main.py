@@ -13,6 +13,7 @@ from handler_redirect_to_rhine import redirect_to_rhine
 from handler_return_fileid import return_file_id
 from handler_welcome_verify import new_member_welcome
 from handler_smart_deal import smart_deal
+from handler_group_verify import verify_new_member
 from util_database import init_db
 
 config_fp = open('config.json')
@@ -55,13 +56,13 @@ async def bot_init():
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         return_file_id,
         filters.incoming & pyrogram.filters.private & (pyrogram.filters.media | pyrogram.filters.forwarded)
-    ))
+    ), group=0)
 
     # 踢不加群就發言的人
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         galgroup_non_member_msg_abuse,
         filters.incoming & filters.chat(GALGROUP)
-    ), group=1)
+    ), group=-2)
 
     # 拉伸手黨到萊茵圖書館
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
@@ -76,6 +77,11 @@ async def bot_init():
         smart_deal,
         filters.incoming & filters.text
     ), group=2)
+
+    global_var.app.add_handler(pyrogram.handlers.MessageHandler(
+        verify_new_member,
+        filters.incoming & filters.group
+    ), group=1)
 
     await pyrogram.idle()
 

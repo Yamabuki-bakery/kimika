@@ -3,8 +3,8 @@ from botConfig import *
 from util_tg_operation import get_sender_id, api_check_common_chat
 
 
-async def smart_deal(client, message):
-    app = global_var.app
+async def smart_deal(client: pyrogram.Client, message: pyrogram.types.Message):
+    app = client
     WAITING_REPLY = global_var.SMART_DEAL_WAITING_REPLY
     in_chat_id = message.chat.id
     sender_id = get_sender_id(message)
