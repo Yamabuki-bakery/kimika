@@ -120,7 +120,7 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
 {prompt_channel + prompt_photo + prompt_bio + prompt_new_account + prompt_username}請滿足上述要求，然後在 20 秒後重新加群。
 """
         logging.info(text)
-        restrict_task = asyncio.create_task(app.restrict_chat_member(
+        _ = asyncio.create_task(app.restrict_chat_member(
             chat_id=chatid,
             user_id=new_member.id,
             permissions=pyrogram.types.ChatPermissions()

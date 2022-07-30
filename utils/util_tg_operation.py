@@ -219,8 +219,13 @@ async def get_user_credit(userid: int, chatid: int = None) -> MemberCredit:
     if chatid and chatid < 0:
         try:  # in case the user is left or deleted
             chat_member_info = await app.get_chat_member(chat_id=chatid, user_id=userid)
-            result.joined_time = int(chat_member_info.joined_date.timestamp())
-            result.joined_time_readable = chat_member_info.joined_date.strftime('%d %b, %Y %H:%M')
+            joined_date = chat_member_info.joined_date
+            if joined_date:
+                result.joined_time = int(chat_member_info.joined_date.timestamp())
+                result.joined_time_readable = chat_member_info.joined_date.strftime('%d %b, %Y %H:%M')
+            else:
+                result.joined_time = 0
+                result.joined_time_readable = '不明'
 
         except pyrogram.errors.UserNotParticipant:
             logging.warning(f'[credit] the user {userid} is not in the group')

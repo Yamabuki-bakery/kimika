@@ -1,9 +1,9 @@
+import asyncio
 import logging
 
-from botConfig import *
-import global_var
 import pyrogram
-import asyncio
+
+import global_var
 
 
 async def ado_nothing(_, __):

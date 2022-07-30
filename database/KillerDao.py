@@ -19,7 +19,7 @@ class KillerDao:
         await self.__kimikaDB.commit()
 
     async def del_killer(self, user_id: int, chat_id: int):
-        await self.__kimikaDB.execute('INSERT INTO killer(userid,chatid) VALUES (?,?)', (user_id, chat_id))
+        await self.__kimikaDB.execute('DELETE FROM killer WHERE userid=:uid AND chatid=:cid', {'uid': user_id, 'cid': chat_id})
         await self.__kimikaDB.commit()
 
     async def get_killer_list(self, chat_id: int) -> list[int]:
