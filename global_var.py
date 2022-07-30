@@ -1,6 +1,10 @@
-import pyrogram, sqlite3
+import pyrogram
+
+from database.KimikaDB import KimikaDB
 
 app: pyrogram.Client
-DB: sqlite3.Connection
 SMART_DEAL_WAITING_REPLY = {}
 NEW_MEMBER_WATCHING_LIST = {}
+ANTI_REPLAY_LIST: [int] = []
+
+db: KimikaDB

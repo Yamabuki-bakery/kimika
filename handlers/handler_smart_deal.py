@@ -1,8 +1,9 @@
 import global_var, logging, re, pyrogram.errors, asyncio
 from botConfig import *
-from util_tg_operation import get_sender_id, api_check_common_chat
+from utils.util_tg_operation import get_sender_id, api_check_common_chat
+from utils.util_anti_replay import anti_replay
 
-
+@anti_replay
 async def smart_deal(client: pyrogram.Client, message: pyrogram.types.Message):
     app = client
     WAITING_REPLY = global_var.SMART_DEAL_WAITING_REPLY

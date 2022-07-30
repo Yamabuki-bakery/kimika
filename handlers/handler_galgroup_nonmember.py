@@ -1,9 +1,14 @@
-import pyrogram, logging, asyncio, global_var, time
+import global_var
+import logging
+import pyrogram
 import pyrogram.errors
+import time
+
 from botConfig import *
-from util_database import db_async, dbcommit_async
+from utils.util_anti_replay import anti_replay
 
 
+@anti_replay
 async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogram.types.Message):
     app = client
     # logging.info(message)
@@ -22,7 +27,7 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
 
     if message.from_user.id in global_var.NEW_MEMBER_WATCHING_LIST and message.chat.id == \
             global_var.NEW_MEMBER_WATCHING_LIST[message.from_user.id]:
-        logging.info(f'⚠️ user {message.from_user.first_name} is in watching list, delete this message')
+        logging.info(f'[galgroup_non_member] ⚠️ user {message.from_user.first_name} is in watching list, delete this message')
         await message.delete()
         return
 
@@ -33,7 +38,7 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
         # logging.info(f'User {message.from_user.id} {message.from_user.first_name} is in the chat')
         pass
     else:
-        logging.warning(f'⚠️ User {message.from_user.id} {message.from_user.first_name} is NOT in the chat!')
+        logging.warning(f'[galgroup_non_member] ⚠️ User {message.from_user.id} {message.from_user.first_name} is NOT in the chat!')
         # await app.delete_user_history(GALGROUP, message.from_user.id)
         await message.forward(KIMIKACACHE)
         await app.delete_messages(GALGROUP, message.id)
@@ -47,15 +52,13 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
 
 
 async def check_common_chat(user_id, first_name, target_chat, app: pyrogram.Client):
-    DB = global_var.DB
+    galMembersDao = global_var.db.galMembersDao
     # not querying api too much, check local db first
     # cursor = DB.execute('SELECT * FROM members WHERE userid=:target', {'target': user_id})
-    cursor = await db_async(DB, 'SELECT * FROM members WHERE userid=:target', {'target': user_id})
-    row = cursor.fetchone()
-    if row:
-        assert row[0] == user_id
-        logging.info(f'✅📖 User {user_id} {row[1]} found in db, time {row[2]}')
-        if time.time() - row[2] < 86400:
+    name_in_db, last_check_time = await galMembersDao.check_member(user_id)
+    if name_in_db is not None:
+        logging.info(f'[check_common_chat] ✅📖 User {user_id} {name_in_db} found in db, time {last_check_time}')
+        if time.time() - last_check_time < 86400:
             return True
 
     result = False
@@ -64,14 +67,12 @@ async def check_common_chat(user_id, first_name, target_chat, app: pyrogram.Clie
         for chat in common:
             if chat.id == target_chat:
                 result = True
-                logging.info(f'✅🌐 User {user_id} {first_name} found in (API) common group')
+                logging.info(f'[check_common_chat] ✅🌐 User {user_id} {first_name} found in (API) common group')
                 # DB.execute('REPLACE INTO members VALUES (?,?,?)', (user_id, first_name, int(time.time())))
-                await db_async(DB, 'REPLACE INTO members VALUES (?,?,?)', (user_id, first_name, int(time.time())))
-                # DB.commit()
-                await dbcommit_async(DB)
+                await galMembersDao.update_member(user_id, first_name, int(time.time()))
                 break
     except pyrogram.errors.PeerIdInvalid:
-        logging.error(f'❌ Cannot get common group due to PEER INVALID, try get chat member instead.')
+        logging.error(f'[check_common_chat] ❌ Cannot get common group due to PEER INVALID, try get chat member instead.')
         # chat_member = await app.get_chat_member(target_chat, user_id)
         results = []
         async for m in app.get_chat_members(target_chat, query=first_name,
@@ -79,7 +80,7 @@ async def check_common_chat(user_id, first_name, target_chat, app: pyrogram.Clie
             results.append(m)
         for chat_member in results:
             if chat_member.user.id == user_id:
-                logging.info(f'✅🌐 User {user_id} {first_name} found in (API - search) common group')
+                logging.info(f'[check_common_chat] ✅🌐 User {user_id} {first_name} found in (API - search) common group')
                 result = True
                 break
 

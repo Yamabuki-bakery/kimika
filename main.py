@@ -7,14 +7,14 @@ from pyrogram import filters
 import global_var
 # from global_var import app, DB
 from botConfig import *
-from handler_command import at_command
-from handler_galgroup_nonmember import galgroup_non_member_msg_abuse
-from handler_redirect_to_rhine import redirect_to_rhine
-from handler_return_fileid import return_file_id
-from handler_welcome_verify import new_member_welcome
-from handler_smart_deal import smart_deal
-from handler_group_verify import verify_new_member
-from util_database import init_db
+from handlers.handler_command import at_command
+from handlers.handler_galgroup_nonmember import galgroup_non_member_msg_abuse
+from handlers.handler_redirect_to_rhine import redirect_to_rhine
+from handlers.handler_return_fileid import return_file_id
+from handlers.handler_welcome_verify import new_member_welcome
+from handlers.handler_smart_deal import smart_deal
+from handlers.handler_group_verify import verify_new_member
+from utils.util_database import init_db
 
 config_fp = open('config.json')
 CONFIG = json.load(config_fp)
@@ -80,7 +80,7 @@ async def bot_init():
 
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         verify_new_member,
-        filters.incoming & filters.group
+        filters.incoming & filters.group & filters.new_chat_members
     ), group=1)
 
     await pyrogram.idle()

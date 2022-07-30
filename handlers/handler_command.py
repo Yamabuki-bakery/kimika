@@ -1,19 +1,23 @@
 import asyncio
+import json
 import logging
-import pyrogram
 import random
 import re
-import json
+from datetime import datetime, timedelta
+
+import pyrogram
+import pyrogram.errors
 
 import global_var
 from botConfig import *
-from util_tg_operation import speak, send_song, get_user_credit
-import pyrogram.errors
+from utils.util_anti_replay import anti_replay
+from utils.util_tg_operation import speak, send_song, get_user_credit, get_sender_id, get_sender_name
 
 
+@anti_replay
 async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
     app = client
-    DB = global_var.DB
+    killerDao = global_var.db.killerDao
     (reply_to_possibility, reply_to_msg_id) = (0.75, message.reply_to_message.id) if message.reply_to_message else (
         -1, None)
     # return
@@ -126,8 +130,8 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                 target_id = message.from_user.id
 
             credit_info = await get_user_credit(target_id, message.chat.id)
-            debug_msg = (await speak(message.chat.id,
-                                     json.dumps(credit_info.__dict__, indent=2, separators=(',', ': '), ensure_ascii=False)))[0]
+            debug_msg = \
+                (await speak(message.chat.id, json.dumps(credit_info.__dict__, indent=2, ensure_ascii=False)))[0]
             await asyncio.sleep(90)
             await app.delete_messages(message.chat.id, debug_msg.id)
         if command_list.index(command_called) == 9:  # wipe
@@ -143,14 +147,10 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                     else:
                         raise ValueError('[wipe] 權限不足')
                 # 檢查調用人 killer 權限
-                caller_id = message.from_user.id
-                cursor = await db_async(DB, 'SELECT * FROM killer WHERE userid=:uid AND chatid=:cid',
-                                        {'uid': caller_id, 'cid': message.chat.id})
-                row = cursor.fetchone()
-                if row:
-                    pass
-                else:
-                    raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 不是 killer')
+                caller_id = get_sender_id(message)
+
+                if not await killerDao.check_killer(caller_id, message.chat.id):
+                    raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 不是 killer')
                 # 檢查目標是否爲 空，kimika，管理員，調用人
                 if reply_to_msg_id is None:
                     raise ValueError(f'[wipe] 沒有 reply 到人身上')
@@ -159,25 +159,30 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                 target_id = target_msg.from_user.id
 
                 if caller_id == target_id:
-                    raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 嘗試橄欖自己')
+                    raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 嘗試橄欖自己')
 
-                target_member = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
-                if target_member.user.is_self:
-                    raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 嘗試橄欖 kimika')
+                try:
+                    target_member = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
+                    if target_member.user.is_self:
+                        raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 嘗試橄欖 kimika')
+                except pyrogram.errors.UserNotParticipant:
+                    logging.info('[wipe] UserNotParticipant，爲何不直接橄欖呢')
+                    target_member = None
 
-                if target_member.status == pyrogram.enums.ChatMemberStatus.ADMINISTRATOR or \
-                        target_member.status == pyrogram.enums.ChatMemberStatus.OWNER:
-                    raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 嘗試橄欖管理員')
+                if target_member is not None and \
+                        (target_member.status == pyrogram.enums.ChatMemberStatus.ADMINISTRATOR or
+                         target_member.status == pyrogram.enums.ChatMemberStatus.OWNER):
+                    raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 嘗試橄欖管理員')
 
                 # 檢查目標 credit message count 和 joined time
                 target_credit = await get_user_credit(target_id, message.chat.id)
                 if target_credit.msg_count_before_24h > 10:
                     await app.send_message(chat_id=message.chat.id, text='⛔️無法 Wipe：此人以前講過話，你可以嘗試 kick。')
-                    raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 嘗試橄欖講過話的人')
+                    raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 嘗試橄欖講過話的人')
 
                 if datetime.now() - datetime.fromtimestamp(target_credit.joined_time) > timedelta(days=14):
                     await app.send_message(chat_id=message.chat.id, text='⛔️無法 Wipe：此人屬於老群友，請聯絡管理員。')
-                    raise ValueError(f'[wipe] 此人 {message.from_user.first_name} 嘗試橄欖老群友')
+                    raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 嘗試橄欖老群友')
 
                 # 執行踢人
                 await target_msg.forward(KIMIKACACHE)
@@ -188,7 +193,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                             f'**ID**: [{target_id}](tg://user?id={target_id})\n' \
                             f'**User**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
                             f'👋🏻 **Action**: Kicked with history wiped\n' \
-                            f'🤔 **Reason**: Invoked by [{message.from_user.first_name}](tg://user?id={caller_id})'
+                            f'🤔 **Reason**: Invoked by [{get_sender_name(message)}](tg://user?id={caller_id})'
 
                 await app.send_message(chat_id=message.chat.id, text=resp_text)
 
@@ -209,14 +214,9 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                     else:
                         raise ValueError('[kick] 權限不足')
                 # 檢查調用人 killer 權限
-                caller_id = message.from_user.id
-                cursor = await db_async(DB, 'SELECT * FROM killer WHERE userid=:uid AND chatid=:cid',
-                                        {'uid': caller_id, 'cid': message.chat.id})
-                row = cursor.fetchone()
-                if row:
-                    pass
-                else:
-                    raise ValueError(f'[kick] 此人 {message.from_user.first_name} 不是 killer')
+                caller_id = get_sender_id(message)
+                if not await killerDao.check_killer(caller_id, message.chat.id):
+                    raise ValueError(f'[kick] 此人 {get_sender_name(message)} 不是 killer')
                 # 檢查目標是否爲 空，kimika，管理員，調用人
                 if reply_to_msg_id is None:
                     raise ValueError(f'[kick] 沒有 reply 到人身上')
@@ -225,21 +225,26 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                 target_id = target_msg.from_user.id
 
                 if caller_id == target_id:
-                    raise ValueError(f'[kick] 此人 {message.from_user.first_name} 嘗試橄欖自己')
+                    raise ValueError(f'[kick] 此人 {get_sender_name(message)} 嘗試橄欖自己')
 
-                target_member = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
-                if target_member.user.is_self:
-                    raise ValueError(f'[kick] 此人 {message.from_user.first_name} 嘗試橄欖 kimika')
+                try:
+                    target_member = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
+                    if target_member.user.is_self:
+                        raise ValueError(f'[kick] 此人 {get_sender_name(message)} 嘗試橄欖 kimika')
+                except pyrogram.errors.UserNotParticipant:
+                    logging.info('[kick] UserNotParticipant 爲何不直接橄欖呢？')
+                    target_member = None
 
-                if target_member.status == pyrogram.enums.ChatMemberStatus.ADMINISTRATOR or \
-                        target_member.status == pyrogram.enums.ChatMemberStatus.OWNER:
-                    raise ValueError(f'[kick] 此人 {message.from_user.first_name} 嘗試橄欖管理員')
+                if target_member is not None and \
+                        (target_member.status == pyrogram.enums.ChatMemberStatus.ADMINISTRATOR or
+                         target_member.status == pyrogram.enums.ChatMemberStatus.OWNER):
+                    raise ValueError(f'[kick] 此人 {get_sender_name(message)} 嘗試橄欖管理員')
 
                 # 檢查目標 joined time
                 target_credit = await get_user_credit(target_id, message.chat.id)
                 if datetime.now() - datetime.fromtimestamp(target_credit.joined_time) > timedelta(days=14):
                     await app.send_message(chat_id=message.chat.id, text='⛔️無法 kick：此人屬於老群友，請聯絡管理員。')
-                    raise ValueError(f'[kick] 此人 {message.from_user.first_name} 嘗試橄欖老群友')
+                    raise ValueError(f'[kick] 此人 {get_sender_name(message)} 嘗試橄欖老群友')
 
                 # 執行踢人
                 await app.ban_chat_member(chat_id=message.chat.id, user_id=target_id)
@@ -248,7 +253,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                             f'**ID**: [{target_id}](tg://user?id={target_id})\n' \
                             f'**User**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
                             f'👋🏻 **Action**: Kicked\n' \
-                            f'🤔 **Reason**: Invoked by [{message.from_user.first_name}](tg://user?id={caller_id})'
+                            f'🤔 **Reason**: Invoked by [{get_sender_name(message)}](tg://user?id={caller_id})'
 
                 await app.send_message(chat_id=message.chat.id, text=resp_text)
 
@@ -263,32 +268,28 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                 if reply_to_msg_id is None:
                     raise ValueError(f'[killer add] 沒有 reply 到人身上')
 
-                caller_id = message.from_user.id
+                caller_id = get_sender_id(message)
                 caller_member = await app.get_chat_member(chat_id=message.chat.id, user_id=caller_id)
                 target_msg = await app.get_messages(chat_id=message.chat.id, message_ids=reply_to_msg_id)
-                target_id = target_msg.from_user.id
+                target_id = get_sender_id(target_msg)
 
                 if caller_member.status != pyrogram.enums.ChatMemberStatus.ADMINISTRATOR and \
                         caller_member.status != pyrogram.enums.ChatMemberStatus.OWNER:
-                    raise ValueError(f'[killer add] 此人 {message.from_user.first_name} 不是管理員')
+                    raise ValueError(f'[killer add] 此人 {get_sender_name(message)} 不是管理員')
 
                 target_user = await app.get_users(target_id)
                 logging.info(f'[killer add] {caller_member.user.first_name} 要增加 killer {target_user.first_name}')
 
-                cursor = await db_async(DB, 'SELECT * FROM killer WHERE userid=:uid AND chatid=:cid',
-                                        {'uid': target_id, 'cid': message.chat.id})
-                row = cursor.fetchone()
-                if row:
+                if await killerDao.check_killer(target_id, message.chat.id):
                     raise ValueError(f'[killer add] 此人 {target_user.first_name} 已在 killer 數據庫')
 
-                await db_async(DB, 'INSERT INTO killer(userid,chatid) VALUES (?,?)', (target_id, message.chat.id))
-                await dbcommit_async(DB)
+                await killerDao.add_killer(target_id, message.chat.id)
 
                 resp_text = f'🤔**New Killer**\n\n' \
                             f'**ID**: [{target_user.first_name}](tg://user?id={target_id})\n' \
                             f'**User**: {"@" + target_user.username if target_user.username else "None"}\n\n' \
                             f'👋🏻 **Action**: Granted\n' \
-                            f'🤔 **Reason**: Invoked by admin [{message.from_user.first_name}](tg://user?id={caller_id})'
+                            f'🤔 **Reason**: Invoked by admin [{get_sender_name(message)}](tg://user?id={caller_id})'
 
                 await app.send_message(chat_id=message.chat.id, text=resp_text)
 
@@ -303,35 +304,28 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                 if reply_to_msg_id is None:
                     raise ValueError(f'[killer del] 沒有 reply 到人身上')
 
-                caller_id = message.from_user.id
+                caller_id = get_sender_id(message)
                 caller_member = await app.get_chat_member(chat_id=message.chat.id, user_id=caller_id)
                 target_msg = await app.get_messages(chat_id=message.chat.id, message_ids=reply_to_msg_id)
-                target_id = target_msg.from_user.id
+                target_id = get_sender_id(target_msg)
 
                 if caller_member.status != pyrogram.enums.ChatMemberStatus.ADMINISTRATOR and \
                         caller_member.status != pyrogram.enums.ChatMemberStatus.OWNER:
-                    raise ValueError(f'[killer del] 此人 {message.from_user.first_name} 不是管理員')
+                    raise ValueError(f'[killer del] 此人 {get_sender_name(message)} 不是管理員')
 
                 target_user = await app.get_users(target_id)
                 logging.info(f'[killer del] {caller_member.user.first_name} 要消除 killer {target_user.first_name}')
 
-                cursor = await db_async(DB, 'SELECT * FROM killer WHERE userid=:uid AND chatid=:cid',
-                                        {'uid': target_id, 'cid': message.chat.id})
-                row = cursor.fetchone()
-                if row:
-                    pass
-                else:
+                if not await killerDao.check_killer(target_id, message.chat.id):
                     raise ValueError(f'[killer del] 此人 {target_user.first_name} 不在 killer 數據庫')
 
-                await db_async(DB, 'DELETE FROM killer WHERE userid=:uid AND chatid=:cid',
-                               {'uid': target_id, 'cid': message.chat.id})
-                await dbcommit_async(DB)
+                await killerDao.del_killer(target_id, message.chat.id)
 
                 resp_text = f'🤔**Removed Killer**\n\n' \
                             f'**ID**: [{target_user.first_name}](tg://user?id={target_id})\n' \
                             f'**User**: {"@" + target_user.username if target_user.username else "None"}\n\n' \
                             f'👋🏻 **Action**: Revoked\n' \
-                            f'🤔 **Reason**: Invoked by admin [{message.from_user.first_name}](tg://user?id={caller_id})'
+                            f'🤔 **Reason**: Invoked by admin [{get_sender_name(message)}](tg://user?id={caller_id})'
 
                 await app.send_message(chat_id=message.chat.id, text=resp_text)
 
@@ -340,11 +334,10 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
                 await speak(message.chat.id, 'kimika-sticker/3')  # 笑嘻了
 
         if command_list.index(command_called) == 13:  # killer
-            cursor = await db_async(DB, 'SELECT * FROM killer WHERE chatid=:cid', {'cid': message.chat.id})
-            rows = cursor.fetchall()
+            killer_ids = await killerDao.get_killer_list(message.chat.id)
             resp_text = 'List of killers:\n'
-            for row in rows:
-                mUser = await app.get_users(row[1])
+            for user_id in killer_ids:
+                mUser = await app.get_users(user_id)
                 resp_text += f'[{mUser.first_name}](tg://user?id={mUser.id})\n'
 
             await app.send_message(chat_id=message.chat.id, text=resp_text)

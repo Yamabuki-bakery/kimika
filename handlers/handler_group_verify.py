@@ -1,9 +1,13 @@
-import logging, pyrogram.errors
+import logging
+import pyrogram.errors
 
-import pyrogram, asyncio, global_var
-from util_database import db_async, dbcommit_async
-from util_tg_operation import get_user_credit
+import asyncio
+import global_var
+import pyrogram
+
 from botConfig import *
+from utils.util_anti_replay import anti_replay
+from utils.util_tg_operation import get_user_credit
 
 
 class JoinDenyFlags:
@@ -17,42 +21,46 @@ class JoinDenyFlags:
         return not (self.not_chan_member or self.no_photo or self.no_bio or self.no_username or self.new_account)
 
 
-async def add2watch(message: pyrogram.types.Message):
+def add2watch(message: pyrogram.types.Message):
     logging.info(
-        f'🆕️ Message {message.id} is sent by service, {message.from_user.first_name} add to watching list')
+        f'[add2watch] 🆕️ Message {message.id} is sent by service, {message.from_user.first_name} add to watching list')
     global_var.NEW_MEMBER_WATCHING_LIST.update({message.from_user.id: message.chat.id})
+    asyncio.create_task(del_from_watch(message))
+
+
+async def del_from_watch(message: pyrogram.types.Message):
     await asyncio.sleep(6)
     global_var.NEW_MEMBER_WATCHING_LIST.pop(message.from_user.id)
 
 
+@anti_replay
 async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Message):
     if message.service and message.service == pyrogram.enums.MessageServiceType.NEW_CHAT_MEMBERS:
         chatid = message.chat.id
-        asyncio.create_task(add2watch(message))
+        add2watch(message)
         # logging.info(f'🆕️ Group {chatid} new member')
     else:
         # logging.info(f'not service message {message.text}')
         return
-    DB = global_var.DB
 
     new_member = message.from_user
-    cursor = await db_async(DB, 'SELECT * FROM group_verify WHERE chatid=:cid', {'cid': chatid})
-    row = cursor.fetchone()
+    groupVerifyDao = global_var.db.groupVerifyDao
+    verify_scheme = await groupVerifyDao.get_verify_scheme(chatid)
 
-    if row:
+    if verify_scheme:
         await message.delete()
-        use_channel: str = row[1]
-        use_photo: int = row[2]
-        use_bio: int = row[3]
-        use_username: int = row[4]
-        use_new_account: int = row[5]
-        verify_scheme = "" \
+        use_channel: str | None = verify_scheme[0]
+        use_photo: int = verify_scheme[1]
+        use_bio: int = verify_scheme[2]
+        use_username: int = verify_scheme[3]
+        use_new_account: int = verify_scheme[4]
+        verify_scheme_str = "" \
                         + ("channel " if use_channel is not None else "") \
-                        + ("photo " if use_photo == 1 else "") \
-                        + ("bio " if use_bio == 1 else "") \
-                        + ("username " if use_username == 1 else "") \
-                        + ("new account " if use_new_account == 1 else "")
-        logging.info(f'🆕️ Group {chatid} verify new member, with {verify_scheme}')
+                        + ("photo " if use_photo else "") \
+                        + ("bio " if use_bio else "") \
+                        + ("username " if use_username  else "") \
+                        + ("new account " if use_new_account else "")
+        logging.info(f'[verify_new_member] 🆕️ Group {chatid} verify new member, with {verify_scheme_str}')
     else:
         return
 
@@ -70,7 +78,8 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
                 results.append(m)
             for chan_member in results:
                 if chan_member.user.id == new_member.id:
-                    logging.info(f'✅🌐 User {new_member.id} {new_member.first_name} found in (API - search) channel')
+                    logging.info(
+                        f'[verify_new_member] ✅🌐 User {new_member.id} {new_member.first_name} found in (API - search) channel')
                     in_channel = True
                     break
         except pyrogram.errors.RPCError as e:

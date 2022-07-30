@@ -1,8 +1,9 @@
 import pyrogram
-
+from utils.util_anti_replay import anti_replay
 from botConfig import *
 
 
+@anti_replay
 async def return_file_id(client: pyrogram.Client, message: pyrogram.types.Message):
     app = client
     media_uri = ''

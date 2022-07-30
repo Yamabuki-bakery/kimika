@@ -1,24 +1,23 @@
-import logging
-import pyrogram
-import eyed3
 import asyncio
-import time
+import logging
 import os
+import time
 from datetime import datetime, timedelta
-from pyrogram.raw import functions
-import pyrogram.errors
 
-from botConfig import *
+import eyed3
+import pyrogram
+import pyrogram.errors
+from pyrogram.raw import functions
+
 import global_var
-from util_database import db_async, dbcommit_async
-from util_pyncmm import fetch_mp3_metadata, download_mp3
+from botConfig import *
+from utils.util_pyncmm import fetch_mp3_metadata, download_mp3
 
 FILE_ID_CACHE = {}
 
 
 async def speak(chat_id: int, msg_choices: (str, list), reply_to_msg_id: int = None):
     app = global_var.app
-    DB = global_var.DB
     msgs_to_send = list(msg_choices) if not isinstance(msg_choices, str) else [msg_choices]
     returns = []
     for msg in msgs_to_send:
@@ -101,40 +100,37 @@ WORKING_FLAGS = WorkingFlags()
 
 async def send_chat_action(action: pyrogram.enums.chat_action, chat_id: int):
     app = global_var.app
-    DB = global_var.DB
     while 1:
         await app.send_chat_action(chat_id, action)
         await asyncio.sleep(5)
         if chat_id not in WORKING_FLAGS.chat_action_chats:
-            logging.info(f"Chat action {action} at chat {chat_id} ended.")
+            logging.info(f"[send_chat_action] Chat action {action} at chat {chat_id} ended.")
             break
 
 
 async def send_song(song_id: int, chat_id: int):
     global WORKING_FLAGS
     app = global_var.app
-    DB = global_var.DB
-    logging.info(f'🎵 Sending music, id: {song_id} to {chat_id}')
+    songDao = global_var.db.songDao
+    logging.info(f'[send_song] 🎵 Sending music, id: {song_id} to {chat_id}')
     if chat_id not in WORKING_FLAGS.chat_action_chats:
         WORKING_FLAGS.chat_action_chats.append(chat_id)
         asyncio.create_task(send_chat_action(pyrogram.enums.chat_action.ChatAction.UPLOAD_DOCUMENT, chat_id))
     # check cache
 
-    cursor = await db_async(DB, 'SELECT * FROM music WHERE songid=:sid', {'sid': song_id})
-    row = cursor.fetchone()
-    if row:
-        logging.info(f"🎵 Cache hit, song {row[1]}")
-        cache_msg_id = row[2]
+    cached_id = await songDao.get_cached_song(song_id)
+    if cached_id:
+        logging.info(f"[send_song] 🎵 Cache hit, song {song_id}")
+        cache_msg_id = cached_id
         try:
             cache_msg = await app.get_messages(chat_id=KIMIKACACHE, message_ids=cache_msg_id)
             if cache_msg is None:
-                raise ValueError("Cache msg does not exist.")
+                raise ValueError("[send_song] Cache msg does not exist.")
             await cache_msg.forward(chat_id=chat_id)
             WORKING_FLAGS.chat_action_chats.remove(chat_id)
         except (pyrogram.errors.RPCError, ValueError, AttributeError) as err:
-            logging.warning(f"🎵 Cache expired, song {row[1]}, try again.")
-            await db_async(DB, 'DELETE FROM music WHERE songid=:sid', {'sid': song_id})
-            await dbcommit_async(DB)
+            logging.warning(f"[send_song] 🎵 Cache expired, song {song_id}, try again.")
+            await songDao.delete_song_cache(song_id)
             await send_song(song_id, chat_id)
         return
 
@@ -182,15 +178,14 @@ async def send_song(song_id: int, chat_id: int):
         file_name=None,
         protect_content=False,
     )
-    logging.info(f'🎵 Music sent! {chat_id}, {metadata["name"]}')
+    logging.info(f'[send_song] 🎵 Music sent! {chat_id}, {metadata["name"]}')
     WORKING_FLAGS.chat_action_chats.remove(chat_id)
     cache_msg = await sent.forward(KIMIKACACHE)
-    await db_async(DB, 'INSERT INTO music(songid,cache_msg_id) VALUES (?,?)', (song_id, cache_msg.id))
-    await dbcommit_async(DB)
+    await songDao.save_song_cache(song_id, cache_msg.id)
     if os.path.exists("music.mp3"):
         os.remove("music.mp3")
     else:
-        logging.error("music.mp3 does not exist")
+        logging.error("[send_song] music.mp3 does not exist")
 
 
 class MemberCredit:
@@ -206,7 +201,6 @@ class MemberCredit:
 
 async def get_user_credit(userid: int, chatid: int = None) -> MemberCredit:
     app = global_var.app
-    DB = global_var.DB
     result = MemberCredit()
     result.valid = True
     user_info = await app.get_users(userid)
@@ -230,7 +224,7 @@ async def get_user_credit(userid: int, chatid: int = None) -> MemberCredit:
 
         except pyrogram.errors.UserNotParticipant:
             logging.warning(f'[credit] the user {userid} is not in the group')
-            result.joined_time = int(time.time()),
+            result.joined_time = int(time.time())
             result.joined_time_readable = 'Unknown'
 
         # A subroutine to find message count sent 1 day ago and older
@@ -267,8 +261,15 @@ async def api_check_common_chat(user_id: int, target_chat: int):
     return False
 
 
-def get_sender_id(message):
+def get_sender_id(message: pyrogram.types.Message):
     if message.from_user:
         return message.from_user.id
     else:
         return message.sender_chat.id
+
+
+def get_sender_name(message: pyrogram.types.Message):
+    if message.from_user:
+        return message.from_user.first_name
+    else:
+        return message.sender_chat.title or message.sender_chat.first_name

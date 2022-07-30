@@ -3,11 +3,11 @@ import logging
 import re
 
 import pyrogram
-
+from utils.util_anti_replay import anti_replay
 from botConfig import *
-from util_tg_operation import get_user_credit
+from utils.util_tg_operation import get_user_credit
 
-
+@anti_replay
 async def new_member_welcome(client: pyrogram.Client, message):
     app = client
     # DB = global_var.DB

@@ -1,7 +1,9 @@
 import logging, pyrogram, asyncio, global_var
-from util_tg_operation import get_sender_id
+from utils.util_tg_operation import get_sender_id
+from utils.util_anti_replay import anti_replay
 
 
+@anti_replay
 async def redirect_to_rhine(client: pyrogram.Client, message: pyrogram.types.Message):
     app = client
     WAITING_REPLY = global_var.SMART_DEAL_WAITING_REPLY

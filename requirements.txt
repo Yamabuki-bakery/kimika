@@ -3,3 +3,8 @@ pyrogram
 TgCrypto
 aiohttp
 eyeD3
+DateTime
+aiosqlite
+sewar
+Pillow
+numpy
