@@ -138,9 +138,8 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
         prompt_new_account = '' + (' * 使用你的 TG 大號\n' if deny_flags.new_account else '')
         prompt_username = '' + (f' * 設置用戶名\n' if deny_flags.no_username else '')
         text = f"""[@{new_member.first_name}](tg://user?id={new_member.id}) 你好，要加入本群你需要：
-{prompt_channel + prompt_photo + prompt_bio + prompt_new_account + prompt_username}請滿足上述要求，然後在 20 秒後重新加群。
-"""
-        logging.info(text)
+{prompt_channel + prompt_photo + prompt_bio + prompt_new_account + prompt_username}請滿足上述要求，然後在 20 秒後重新加群。"""
+        # logging.info(text)
 
         old_permissions, until_date = await check_permission_task
 
