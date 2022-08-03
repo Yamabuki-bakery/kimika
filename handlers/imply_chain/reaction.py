@@ -1,4 +1,3 @@
-from tkinter import N
 from botConfig import *
 from utils.util_tg_operation import get_sender_id, get_sender_name
 import pyrogram, re, logging, asyncio
