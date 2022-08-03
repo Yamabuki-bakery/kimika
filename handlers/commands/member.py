@@ -2,7 +2,7 @@ import asyncio
 import pyrogram
 import pyrogram.errors
 
-from utils.util_tg_operation import speak
+from utils.util_tg_operation import speak, get_sender_id, get_sender_name
 
 
 async def member(app: pyrogram.Client, message: pyrogram.types.Message, rtp: float):
@@ -10,10 +10,10 @@ async def member(app: pyrogram.Client, message: pyrogram.types.Message, rtp: flo
         if message.reply_to_message else (-1, None)
     if reply_to_msg_id:
         target_msg = await app.get_messages(chat_id=message.chat.id, message_ids=reply_to_msg_id)
-        target_id = target_msg.from_user.id
+        target_id = get_sender_id(target_msg)
 
     else:
-        target_id = message.from_user.id
+        target_id = get_sender_id(message)
     try:
         member_info = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
     except pyrogram.errors.UserNotParticipant:

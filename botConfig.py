@@ -5,6 +5,8 @@ RHINEGROUP = -1001791817816
 KIMIKACACHE = -1001679667908
 ESUONEGOV = 799852248
 
+WATCHING_LIST_WAIT_SEC = 6
+
 SMART_DEAL_FLAGS = ['\U0001F440']
 # flags 👀
 
@@ -106,6 +108,8 @@ Kimika 問候您，用法：
 `killer     `查看特權名單
 
 點歌：告訴我你要找的音樂的網易雲 ID 或者分享連結
+傳送 Reaction：
+    用 kimika 🔥🤩 或者 kimika 🤮 5 回覆一個人
                        """
 
 CHINA_REPLY_LIST = [

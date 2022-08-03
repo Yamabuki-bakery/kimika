@@ -272,6 +272,76 @@ async def get_user_credit(user: int | pyrogram.types.User, chatid: int = None, i
 
     return result
 
+async def get_chat_credit(chat: int | pyrogram.types.Chat, chatid: int = None, ignore_400=False) -> MemberCredit:
+    app = global_var.app
+    if isinstance(chat, int) and not ignore_400:
+        userid = chat
+    elif isinstance(chat, pyrogram.types.Chat):
+        userid = chat.id
+    else:
+        raise ValueError('[get_chat_creditv] 請求過於惡俗！')
+
+    result = MemberCredit()
+
+    try:
+        chat_info = await app.get_chat(userid)
+
+        result.photo = True if chat_info.photo else False
+        result.new_account = True
+        result.username = chat_info.username if chat_info.username else None
+        result.bio = chat_info.description if chat_info.description else None
+
+    except pyrogram.errors.PeerIdInvalid:
+        if ignore_400:
+            logging.warning(f'[get_chat_credit] Peer ID invalid for unknown reason! Ignoring, the bio is unavailable')
+            result.bio = None
+            result.photo = True if chat.photo else False
+            result.new_account = userid > 5000000000
+            result.username = chat.username if chat.username else None
+        else:
+            logging.error('[get_chat_credit] 過於惡俗！Peer ID invalid for unknown reason!')
+            raise InterruptedError('[get_chat_credit] Cannot ignoring 400!')
+
+    # logging.info(full_user_info.full_user.about)
+
+    if chatid and chatid < 0:
+        try:  # in case the user is left or deleted
+            chat_member_info = await app.get_chat_member(chat_id=chatid, user_id=userid)
+            joined_date = chat_member_info.joined_date
+            if joined_date:
+                result.joined_time = int(chat_member_info.joined_date.timestamp())
+                result.joined_time_readable = chat_member_info.joined_date.strftime('%d %b, %Y %H:%M')
+            else:
+                result.joined_time = 0
+                result.joined_time_readable = '不明'
+
+        except pyrogram.errors.UserNotParticipant:
+            logging.warning(f'[get_chat_credit] the chat {userid} is not in the group')
+            result.joined_time = int(time.time())
+            result.joined_time_readable = 'Unknown'
+
+        # A subroutine to find message count sent 1 day ago and older
+        total_msg_count = await app.search_messages_count(chat_id=chatid, from_user=userid)
+        # logging.info(f'Total msg count: {total_msg_count}')
+        # limit = 50 if total_msg_count > 50 else total_msg_count
+        counted = 0
+        now = datetime.now()
+        # logging.info(f'Start at limit {limit}')
+
+        async for msg in app.search_messages(chat_id=chatid, from_user=userid):
+            # msg: pyrogram.types.Message
+            if now - msg.date < timedelta(days=1):
+                counted += 1
+            else:
+                break
+
+        msg_count_before_24h = total_msg_count - counted
+        result.msg_count_before_24h = msg_count_before_24h
+    else:
+        result.joined_time = 0
+        result.msg_count_before_24h = 0
+
+    return result
 
 async def api_check_common_chat(user_id: int, target_chat: int):
     app = global_var.app

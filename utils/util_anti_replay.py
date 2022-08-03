@@ -17,25 +17,25 @@ def do_nothing(_, __):
 def anti_replay(handler: callable) -> callable:
     if asyncio.iscoroutinefunction(handler):
         # @wraps(fn)
-        async def wrapper(client: pyrogram.Client, message: pyrogram.types.Message):
-            if is_replay(client, handler, message):
+        async def wrapper(client: pyrogram.Client, message: pyrogram.types.Message, *args):
+            if is_replay(client, handler, message, *args):
                 # raise AssertionError(f'[anti_replay] Handler {handler.__name__} message {message.id} at {message.chat.id} replayed!')
                 return await ado_nothing(client, message)
-            return await handler(client, message)
+            return await handler(client, message, *args)
 
         return wrapper
     else:
         # @wraps(fn)
-        def wrapper(client: pyrogram.Client, message: pyrogram.types.Message):
-            if is_replay(client, handler, message):
+        def wrapper(client: pyrogram.Client, message: pyrogram.types.Message, *args):
+            if is_replay(client, handler, message, *args):
                 return do_nothing(client, message)
-            return handler(client, message)
+            return handler(client, message, *args)
 
         return wrapper
 
 
-def is_replay(client: pyrogram.Client, handler: object, message: pyrogram.types.Message) -> bool:
-    query_id = hash_query(client, handler, message)
+def is_replay(client: pyrogram.Client, handler: object, message: pyrogram.types.Message, *args) -> bool:
+    query_id = hash_query(client, handler, message, *args)
     if query_id in global_var.ANTI_REPLAY_LIST:
         # logging.warning(f'[anti_replay] Handler {handler.__name__} message {message.id} at {message.chat.id} replayed!')
         return True
@@ -47,7 +47,10 @@ def is_replay(client: pyrogram.Client, handler: object, message: pyrogram.types.
         return False
 
 
-def hash_query(client: pyrogram.Client, handler: object, message: pyrogram.types.Message) -> int:
+def hash_query(client: pyrogram.Client, handler: object, message: pyrogram.types.Message, *args) -> int:
     # print(f'the function is {id(handler)}')
     # print(f'the message is {message.id} from {message.chat.id}')
-    return hash(client.name + str(id(handler)) + str(message.id) + str(message.chat.id))
+    argv = ''
+    for arg in args:
+        argv += str(arg)
+    return hash(client.name + str(id(handler)) + str(message.id) + str(message.chat.id) + str(argv))

@@ -25,8 +25,8 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
     if message.service and message.service == pyrogram.enums.MessageServiceType.NEW_CHAT_MEMBERS:
         return
 
-    if message.from_user.id in global_var.NEW_MEMBER_WATCHING_LIST and message.chat.id == \
-            global_var.NEW_MEMBER_WATCHING_LIST[message.from_user.id]:
+    if message.from_user.id in global_var.NEW_MEMBER_WATCHING_LIST and \
+          message.chat.id == global_var.NEW_MEMBER_WATCHING_LIST[message.from_user.id]['chat']:
         logging.info(f'[galgroup_non_member] ⚠️ user {message.from_user.first_name} is in watching list, delete this message')
         await message.delete()
         return
