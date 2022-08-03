@@ -57,7 +57,7 @@ async def check_common_chat(user_id, first_name, target_chat, app: pyrogram.Clie
     # cursor = DB.execute('SELECT * FROM members WHERE userid=:target', {'target': user_id})
     name_in_db, last_check_time = await galMembersDao.check_member(user_id)
     if name_in_db is not None:
-        logging.info(f'[check_common_chat] ✅📖 User {user_id} {name_in_db} found in db, time {last_check_time}')
+        # logging.info(f'[check_common_chat] ✅📖 User {user_id} {name_in_db} found in db, time {last_check_time}')
         if time.time() - last_check_time < 86400:
             return True
 

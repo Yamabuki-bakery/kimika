@@ -1,10 +1,11 @@
 import aiosqlite
 
 from botConfig import *
-from database.GalMembersDao import GalMembersDao
-from database.GroupVerifyDao import GroupVerifyDao
-from database.KillerDao import KillerDao
-from database.SongDao import SongDao
+from .GalMembersDao import GalMembersDao
+from .GroupVerifyDao import GroupVerifyDao
+from .KillerDao import KillerDao
+from .SongDao import SongDao
+from .LearningDao import LearningDao
 
 
 class KimikaDB:
@@ -13,6 +14,7 @@ class KimikaDB:
     groupVerifyDao: GroupVerifyDao
     galMembersDao: GalMembersDao
     killerDao: KillerDao
+    learningDao: LearningDao
 
     async def init(self):
         await self.init_db()
@@ -23,6 +25,7 @@ class KimikaDB:
         self.groupVerifyDao = GroupVerifyDao(self)
         self.galMembersDao = GalMembersDao(self)
         self.killerDao = KillerDao(self)
+        self.learningDao = LearningDao(self)
 
     async def init_db(self):
         self.DB = await aiosqlite.connect(DBFILE)
@@ -52,6 +55,17 @@ class KimikaDB:
                               'useBio INTEGER, '
                               'useUsername INTEGER, '
                               'useNewAccount INTEGER'
+                              ')')
+
+        await self.DB.execute('CREATE TABLE IF NOT EXISTS learning ('
+                              'recordid INTEGER PRIMARY KEY, '
+                              'fromChatId INTEGER, '
+                              'callerUserId INTEGER, '
+                              'callerChatId INTEGER, '
+                              'answerMsgId INTEGER, '
+                              'keyword TEXT,'
+                              'learntRespMsgId INTEGER,'
+                              'autoTrigger INTEGER'
                               ')')
         await self.DB.commit()
 

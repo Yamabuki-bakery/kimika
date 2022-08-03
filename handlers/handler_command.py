@@ -84,6 +84,9 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message):
         if await imply_chain.netease_link(app, message, reply_to_possibility):
             return
 
+        if await imply_chain.reaction(app, message):
+            return
+
         if await imply_chain.random_reply(app, message, reply_to_possibility):
             return
 

@@ -189,7 +189,7 @@ async def send_song(song_id: int, chat_id: int):
 
 
 class MemberCredit:
-    valid: bool
+    valid: bool = True
     photo: bool
     new_account: bool
     username: str | None
@@ -199,22 +199,39 @@ class MemberCredit:
     msg_count_before_24h: int
 
 
-async def get_user_credit(userid: int, chatid: int = None) -> MemberCredit:
+async def get_user_credit(user: int | pyrogram.types.User, chatid: int = None, ignore_400=False) -> MemberCredit:
     app = global_var.app
+    if isinstance(user, int) and not ignore_400:
+        userid = user
+    elif isinstance(user, pyrogram.types.User):
+        userid = user.id
+    else:
+        raise ValueError('[get_user_credit] 請求過於惡俗！')
+
     result = MemberCredit()
-    result.valid = True
-    user_info = await app.get_users(userid)
 
-    result.photo = True if user_info.photo else False
-    result.new_account = userid > 5000000000
-    result.username = user_info.username if user_info.username else None
+    try:
+        user_info = await app.get_users(userid)
+        full_user_info = await app.invoke(functions.users.GetFullUser(id=await app.resolve_peer(userid)))
 
-    if user_info.is_deleted:
-        result.valid = False
+        result.photo = True if user_info.photo else False
+        result.new_account = userid > 5000000000
+        result.username = user_info.username if user_info.username else None
+        result.bio = full_user_info.full_user.about if full_user_info.full_user.about else None
+        if user_info.is_deleted:
+            result.valid = False
+    except pyrogram.errors.PeerIdInvalid:
+        if ignore_400:
+            logging.warning(f'[get_user_credit] Peer ID invalid for unknown reason! Ignoring, the bio is unavailable')
+            result.bio = None
+            result.photo = True if user.photo else False
+            result.new_account = userid > 5000000000
+            result.username = user.username if user.username else None
+        else:
+            logging.error('[get_user_credit] 過於惡俗！Peer ID invalid for unknown reason!')
+            raise InterruptedError('[get_user_credit] Cannot ignoring 400!')
 
-    full_user_info = await app.invoke(functions.users.GetFullUser(id=await app.resolve_peer(userid)))
     # logging.info(full_user_info.full_user.about)
-    result.bio = full_user_info.full_user.about if full_user_info.full_user.about else None
 
     if chatid and chatid < 0:
         try:  # in case the user is left or deleted

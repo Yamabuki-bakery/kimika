@@ -1,8 +1,8 @@
 class SongDao:
 
     def __init__(self, db):
-        from . import KimikaDB
-        self.__kimikaDB: KimikaDB.KimikaDB = db
+        from .KimikaDB import KimikaDB
+        self.__kimikaDB: KimikaDB = db
         assert self.__kimikaDB is not None
 
     async def get_cached_song(self, song_id: int) -> int | None:

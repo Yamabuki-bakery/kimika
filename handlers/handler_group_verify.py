@@ -64,9 +64,6 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
     else:
         return
 
-    # start checking credit here
-    credit_task = asyncio.create_task(get_user_credit(new_member.id, chatid))
-
     deny_flags = JoinDenyFlags()
 
     if use_channel is not None:
@@ -91,7 +88,19 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
             deny_flags.not_chan_member = True
 
     if use_bio or use_photo or use_username or use_new_account:
-        credit = await credit_task
+        retry = 3
+        while True:
+            try:
+                credit = await get_user_credit(new_member, chatid)
+                break
+            except InterruptedError:
+                logging.warning(f'[verify_new_member] Get credit failed, retrying: {retry}')
+                retry -= 1
+                await asyncio.sleep(2)
+                if retry == 0:
+                    credit = await get_user_credit(new_member, chatid, True)
+                    break
+
         if (not credit.photo) and use_photo:
             deny_flags.no_photo = True
         if credit.bio is None and use_bio:
