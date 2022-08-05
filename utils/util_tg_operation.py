@@ -12,6 +12,7 @@ from pyrogram.raw import functions
 import global_var
 from botConfig import *
 from utils.util_pyncmm import fetch_mp3_metadata, download_mp3
+from utils.util_str2filename import slugify
 
 FILE_ID_CACHE = {}
 
@@ -166,6 +167,7 @@ async def send_song(song_id: int, chat_id: int):
     mp3_obj.tag.artist = metadata["artist"]
     mp3_obj.tag.title = metadata["name"]
     mp3_obj.tag.images.set(3, metadata["albumPicUrl"].read(), metadata["coverType"])
+    mp3_obj.tag.comments.set('Downloaded by Kimika')
     mp3_obj.tag.save()
 
     sent = await app.send_audio(
@@ -175,7 +177,7 @@ async def send_song(song_id: int, chat_id: int):
         performer=metadata["artist"],
         title=metadata["name"],
         thumb=metadata["albumPicUrl"],
-        file_name=None,
+        file_name=f'{slugify(metadata["artist"])} - {slugify(metadata["name"])}',
         protect_content=False,
     )
     logging.info(f'[send_song] 🎵 Music sent! {chat_id}, {metadata["name"]}')
