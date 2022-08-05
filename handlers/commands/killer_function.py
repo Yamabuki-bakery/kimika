@@ -1,5 +1,3 @@
-from mimetypes import init
-from tkinter.messagebox import NO
 import pyrogram, global_var, logging
 from datetime import datetime
 import pyrogram.errors
