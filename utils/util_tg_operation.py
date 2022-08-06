@@ -177,7 +177,7 @@ async def send_song(song_id: int, chat_id: int):
         performer=metadata["artist"],
         title=metadata["name"],
         thumb=metadata["albumPicUrl"],
-        file_name=f'{slugify(metadata["artist"])} - {slugify(metadata["name"])}',
+        file_name=f'{slugify(metadata["artist"])} - {slugify(metadata["name"])}.mp3',
         protect_content=False,
     )
     logging.info(f'[send_song] 🎵 Music sent! {chat_id}, {metadata["name"]}')
