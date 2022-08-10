@@ -1,6 +1,7 @@
 import logging
 import re
 import pyrogram
+import random
 
 import pyrogram.errors
 
@@ -10,7 +11,7 @@ from . import imply_chain
 
 
 @anti_replay
-async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, again: int = 1):
+async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, again: int = 1, *args):
     app = client
     (reply_to_possibility, reply_to_msg_id) = (0.75, message.reply_to_message.id) if message.reply_to_message else (
         -1, None)
@@ -91,7 +92,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
         if again != 0 and reply_to_msg_id is not None:
             logging.info(f'[at_command] No command found, try the replied message again')
             try_this = await client.get_messages(message.chat.id, reply_to_msg_id)
-            await at_command(client, try_this, 0)
+            await at_command(client, try_this, 0, random.random())
             return
 
         if await imply_chain.random_reply(app, message, reply_to_possibility):
