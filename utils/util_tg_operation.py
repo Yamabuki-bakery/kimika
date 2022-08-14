@@ -226,10 +226,10 @@ async def send_song(song_id: int, chat_id: int):
     WORKING_FLAGS.remove(chat_id)
     cache_msg = await sent.forward(KIMIKACACHE)
     await songDao.save_song_cache(song_id, cache_msg.id)
-    if os.path.exists("music.mp3"):
-        os.remove("music.mp3")
+    if os.path.exists(filename):
+        os.remove(filename)
     else:
-        logging.error("[send_song] music.mp3 does not exist")
+        logging.error(f"[send_song] {filename} does not exist")
 
 
 async def get_user_credit(user: int | pyrogram.types.User, chatid: int = None, ignore_400=False) -> MemberCredit:
