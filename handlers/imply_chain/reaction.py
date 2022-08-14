@@ -3,13 +3,14 @@ from utils.util_tg_operation import get_sender_id, get_sender_name
 import pyrogram, re, logging, asyncio
 import pyrogram.errors
 
+
 async def reaction(app: pyrogram.Client, message: pyrogram.types.Message) -> bool:
-    (reply_to_possibility, reply_to_msg_id) = (1, message.reply_to_message.id) if message.reply_to_message else (-1, None)
+    (reply_to_possibility, reply_to_msg_id) = (1, message.reply_to_message.id) if message.reply_to_message else ( -1, None)
     # Check syntax
     message_text: str = message.text or message.caption or ""
     message_text = message_text.encode('UTF-8').decode('UTF-8')
     try:
-        if message_text[-1] not in TG_REACTIONS:
+        if message_text and message_text[-1] not in TG_REACTIONS:
             # Not ending with tg reaction emoji
             raise ValueError('')
         re_groups = re.search(build_regex(), message_text)
@@ -73,16 +74,18 @@ async def reaction(app: pyrogram.Client, message: pyrogram.types.Message) -> boo
             await target_msg_list[i].react(reaction_list[i], True)
             await asyncio.sleep(0.5)
         except pyrogram.errors.FloodWait:
-            await asyncio(5)
+            await asyncio.sleep(5)
         except pyrogram.errors.RPCError:
             continue
 
     return True
-    
+
+
 def build_regex() -> str:
     pattern = f'([{"".join(TG_REACTIONS)}][{"".join(TG_REACTIONS)} ]*)$'
     # print(pattern)
     return pattern
+
 
 def build_2nd_regex() -> str:
     pattern = f'([{"".join(TG_REACTIONS)}]) *(\d+)$'

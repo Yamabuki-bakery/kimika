@@ -1,4 +1,8 @@
-import asyncio, aiohttp, io, eyed3, re, json, os
+import asyncio
+import eyed3
+import os
+import re
+from services.netease_music import download_mp3, fetch_mp3_metadata
 
 target = 206276
 
@@ -35,46 +39,6 @@ async def main():
     mp3_obj.tag.save()
 
     os.startfile("temp.mp3")
-
-
-async def fetch_mp3_metadata(song_id: int):
-    async with aiohttp.ClientSession() as session:
-        api_resp = await session.post("https://netease.esutg.workers.dev/api", data=str(song_id))
-        if api_resp.ok:
-            metadata = await api_resp.text()
-            metadata = json.loads(metadata)
-        else:
-            raise ValueError("Metadata error!")
-
-        cover_link: str = metadata["albumPicUrl"]
-        cover_img_resp = await session.get(cover_link)
-        cover_img = io.BytesIO(await cover_img_resp.read())
-        cover_img.seek(0)
-
-        metadata.update({"albumPicUrl": cover_img})
-        metadata.update({"coverType": "image/png" if cover_link.endswith('.png') else "image/jpeg"})
-        return metadata
-
-
-async def download_mp3(song_id: int) -> io.BytesIO:
-    async with aiohttp.ClientSession() as session:
-        audio_api_resp = await session.post("https://netease.esutg.workers.dev/audioapi", data=str(song_id))
-        try:
-            audio_link = json.loads(await audio_api_resp.text())['mp3']
-        except:
-            raise ValueError(f"[download_mp3] No mp3 for {song_id}")
-        audio_resp = await session.get(audio_link)
-        size = int(audio_resp.headers.get("Content-Length"))
-        memfile = io.BytesIO()
-        print('[download_mp3] Downloading...')
-        loaded = 0
-        async for chunk in audio_resp.content.iter_chunked(10000):
-            loaded += len(chunk)
-            print(f'\r[download_mp3] Progress: {loaded} / {size}', end='')
-            memfile.write(chunk)
-        print("\n[download_mp3] Complete!")
-        memfile.seek(0)
-        return memfile
 
 
 if __name__ == '__main__':

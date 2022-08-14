@@ -22,7 +22,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
                     'killer del', 'killer', 'ja', 'diss',
                     '\0\1\2\3', 'チャイナ', 'シナ']
     command_called = None
-    logging.info(f'[command] Coming Message {message.text or message.caption or ""}')
+    logging.info(f'[command] Coming Message [{message.text or message.caption or ""}]')
     for command in command_list:
         # if command in (message.text or message.caption or ''):
         target = (message.text or message.caption or '')

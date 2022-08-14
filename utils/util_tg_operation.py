@@ -4,14 +4,17 @@ import os
 import time
 from datetime import datetime, timedelta
 
-import eyed3
+import eyed3, mutagen
 import pyrogram
 import pyrogram.errors
 from pyrogram.raw import functions
 
 import global_var
+import myTypes.MusicMetadata
 from botConfig import *
-from utils.util_pyncmm import fetch_mp3_metadata, download_mp3
+from services.netease_music import fetch_mp3_metadata, download_mp3
+from services import bili_music
+from myTypes.MemberCredit import MemberCredit
 from utils.util_str2filename import slugify
 
 FILE_ID_CACHE = {}
@@ -93,7 +96,30 @@ async def find_file_id(kimika_uri: str):
 
 
 class WorkingFlags:
-    chat_action_chats = []
+    chat_action_chats = {}
+
+    def add(self, chat_id: int, action: pyrogram.enums.chat_action = None):
+        if chat_id in self.chat_action_chats:
+            self.chat_action_chats[chat_id] += 1
+        else:
+            self.chat_action_chats.update({
+                chat_id: 1
+            })
+            asyncio.create_task(send_chat_action(action, chat_id))
+        logging.info(f'[WorkingFlags] the {chat_id} has {self.chat_action_chats[chat_id]}')
+
+    def remove(self, chat_id: int):
+        logging.info(f'[WorkingFlags] the {chat_id} has {self.chat_action_chats[chat_id]}')
+        if chat_id not in self.chat_action_chats:
+            return
+        else:
+            if self.chat_action_chats[chat_id] == 1:
+                self.chat_action_chats.pop(chat_id)
+            else:
+                self.chat_action_chats[chat_id] -= 1
+
+    def check(self, chat_id: int):
+        return chat_id in self.chat_action_chats
 
 
 WORKING_FLAGS = WorkingFlags()
@@ -104,7 +130,7 @@ async def send_chat_action(action: pyrogram.enums.chat_action, chat_id: int):
     while 1:
         await app.send_chat_action(chat_id, action)
         await asyncio.sleep(5)
-        if chat_id not in WORKING_FLAGS.chat_action_chats:
+        if not WORKING_FLAGS.check(chat_id):
             logging.info(f"[send_chat_action] Chat action {action} at chat {chat_id} ended.")
             break
 
@@ -114,9 +140,8 @@ async def send_song(song_id: int, chat_id: int):
     app = global_var.app
     songDao = global_var.db.songDao
     logging.info(f'[send_song] 🎵 Sending music, id: {song_id} to {chat_id}')
-    if chat_id not in WORKING_FLAGS.chat_action_chats:
-        WORKING_FLAGS.chat_action_chats.append(chat_id)
-        asyncio.create_task(send_chat_action(pyrogram.enums.chat_action.ChatAction.UPLOAD_DOCUMENT, chat_id))
+    WORKING_FLAGS.add(chat_id, pyrogram.enums.chat_action.ChatAction.UPLOAD_DOCUMENT)
+    # asyncio.create_task(send_chat_action(pyrogram.enums.chat_action.ChatAction.UPLOAD_DOCUMENT, chat_id))
     # check cache
 
     cached_id = await songDao.get_cached_song(song_id)
@@ -128,7 +153,7 @@ async def send_song(song_id: int, chat_id: int):
             if cache_msg is None:
                 raise ValueError("[send_song] Cache msg does not exist.")
             await cache_msg.forward(chat_id=chat_id)
-            WORKING_FLAGS.chat_action_chats.remove(chat_id)
+            WORKING_FLAGS.remove(chat_id)
         except (pyrogram.errors.RPCError, ValueError, AttributeError) as err:
             logging.warning(f"[send_song] 🎵 Cache expired, song {song_id}, try again.")
             await songDao.delete_song_cache(song_id)
@@ -139,66 +164,72 @@ async def send_song(song_id: int, chat_id: int):
     metadata_task = asyncio.create_task(fetch_mp3_metadata(song_id))
 
     try:
-        metadata = await metadata_task
+        n_metadata: myTypes.MusicMetadata.netease_metadata = await metadata_task
     except Exception as err:
         logging.error(f'🎵[metadata_task] Something went wrong! {err}')
         await speak(chat_id=chat_id, msg_choices='kimika-sticker/5')  # http cat 404
-        WORKING_FLAGS.chat_action_chats.remove(chat_id)
+        WORKING_FLAGS.remove(chat_id)
         return
 
     try:
-        mp3 = await download_mp3_task
+        audio_data = await download_mp3_task
+        caption = ''
+        filename = 'music.mp3'
     except Exception as err:
-        logging.error(f'🎵[download_mp3_task] Something went wrong! {err}')
-        await speak(chat_id=chat_id, msg_choices='kimika-sticker/6')  # http cat 402 payment required
-        WORKING_FLAGS.chat_action_chats.remove(chat_id)
-        return
+        logging.warning(f'🎵[download_mp3_task] Netease mp3 - something went wrong! {err} using bilibili instead!')
 
-    # print(metadata)
+        # use bilibili instead
+        bili_results = await bili_music.bili_search(f'{n_metadata.artist} - {n_metadata.name}')
+        if bili_results is None:
+            logging.error(f'🎵[bili_music_result] bili_results do not return anything!')
+            await speak(chat_id=chat_id, msg_choices='kimika-sticker/6')  # http cat 402 payment required
+            WORKING_FLAGS.remove(chat_id)
+            return
+        best_result = await bili_music.get_best(bili_results, n_metadata)
+        try:
+            audio_data = await bili_music.download_audio(best_result)
+            caption = '🅱'
+            filename = f'music.{best_result.format}'
+        except Exception as err:
+            logging.error(f'🎵[bili_music_download] Cannot download audio file! {err}')
+            await speak(chat_id=chat_id, msg_choices='kimika-sticker/6')  # http cat 402 payment required
+            WORKING_FLAGS.remove(chat_id)
+            return
+
     # print(f"Mp3 size {len(mp3.getvalue())}")
-    mp3_temp = open("music.mp3", mode='w+b')
-    mp3_temp.write(mp3.getvalue())
-    mp3_temp.close()
-    mp3_obj = eyed3.load("music.mp3")
-    if mp3_obj.tag is None:
+    media_tempfile = open(filename, mode='w+b')
+    media_tempfile.write(audio_data.getvalue())
+    media_tempfile.close()
+    # todo: mutagen 不幹了
+    if filename.endswith('mp3'):
+        mp3_obj = eyed3.load(filename)
         mp3_obj.initTag()
-    duration = int(mp3_obj.info.time_secs)
-    mp3_obj.tag.album = metadata["album"]
-    mp3_obj.tag.artist = metadata["artist"]
-    mp3_obj.tag.title = metadata["name"]
-    mp3_obj.tag.images.set(3, metadata["albumPicUrl"].read(), metadata["coverType"])
-    mp3_obj.tag.comments.set('Downloaded by Kimika')
-    mp3_obj.tag.save()
+        # mp3_obj.tag.album = n_metadata.album
+        # mp3_obj.tag.artist = n_metadata.artist
+        # mp3_obj.tag.title = n_metadata.name
+        # mp3_obj.tag.images.set(3, n_metadata.album_pic.read(), n_metadata.cover_type)
+        # mp3_obj.tag.comments.set('Downloaded by Kimika')
+        mp3_obj.tag.save()
 
     sent = await app.send_audio(
         chat_id=chat_id,
-        audio="music.mp3",
-        duration=duration,
-        performer=metadata["artist"],
-        title=metadata["name"],
-        thumb=metadata["albumPicUrl"],
-        file_name=f'{slugify(metadata["artist"])} - {slugify(metadata["name"])}.mp3',
+        audio=filename,
+        duration=n_metadata.duration,
+        performer=n_metadata.artist,
+        title=n_metadata.name,
+        thumb=n_metadata.album_pic,
+        file_name=f'{slugify(n_metadata.artist)} - {slugify(n_metadata.name)}.mp3',
         protect_content=False,
+        # caption=caption
     )
-    logging.info(f'[send_song] 🎵 Music sent! {chat_id}, {metadata["name"]}')
-    WORKING_FLAGS.chat_action_chats.remove(chat_id)
+    logging.info(f'[send_song] 🎵 Music sent! {chat_id}, {n_metadata.name}')
+    WORKING_FLAGS.remove(chat_id)
     cache_msg = await sent.forward(KIMIKACACHE)
     await songDao.save_song_cache(song_id, cache_msg.id)
     if os.path.exists("music.mp3"):
         os.remove("music.mp3")
     else:
         logging.error("[send_song] music.mp3 does not exist")
-
-
-class MemberCredit:
-    valid: bool = True
-    photo: bool
-    new_account: bool
-    username: str | None
-    bio: str | None
-    joined_time: int
-    joined_time_readable: str
-    msg_count_before_24h: int
 
 
 async def get_user_credit(user: int | pyrogram.types.User, chatid: int = None, ignore_400=False) -> MemberCredit:
@@ -274,6 +305,7 @@ async def get_user_credit(user: int | pyrogram.types.User, chatid: int = None, i
 
     return result
 
+
 async def get_chat_credit(chat: int | pyrogram.types.Chat, chatid: int = None, ignore_400=False) -> MemberCredit:
     app = global_var.app
     if isinstance(chat, int) and not ignore_400:
@@ -344,6 +376,7 @@ async def get_chat_credit(chat: int | pyrogram.types.Chat, chatid: int = None, i
         result.msg_count_before_24h = 0
 
     return result
+
 
 async def api_check_common_chat(user_id: int, target_chat: int):
     app = global_var.app
