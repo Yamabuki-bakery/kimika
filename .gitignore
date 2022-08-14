@@ -136,3 +136,6 @@ dmypy.json
 *.session
 *.db
 *.session-journal
+*.mp3
+*.mp4
+*.m4a
