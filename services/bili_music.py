@@ -77,7 +77,14 @@ async def get_duration_task(mdata: bili_metadata) -> int:
             logging.error(f'[get_duration_task] [{mdata.sid}] JSON error! {err}')
             return 0
 
-        return data['data']['duration']
+        if 'data' in data:
+            if 'duration' in data['data']:
+                return data['data']['duration']
+
+        return 0
+
+
+
 
 
 def levenshtein_distance(s: str, t: str) -> int:
