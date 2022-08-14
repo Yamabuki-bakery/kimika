@@ -78,7 +78,7 @@ async def get_duration_task(mdata: bili_metadata) -> int:
             return 0
 
         if 'data' in data:
-            if 'duration' in data['data']:
+            if data['data'] and 'duration' in data['data']:
                 return data['data']['duration']
 
         return 0
