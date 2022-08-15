@@ -45,10 +45,11 @@ async def get_best(bili_results: list[bili_metadata], origin_metadata: netease_m
     scores: list[int] = []
     for bili_result in bili_results:
         score = 0
-        score += levenshtein_distance(bili_result.title, origin_metadata.name)
-        score += levenshtein_distance(bili_result.author, origin_metadata.artist)
+        score += levenshtein_distance(bili_result.title, origin_metadata.title) * 2
+        score += levenshtein_distance(bili_result.artist, origin_metadata.artist) * 3
         score += abs(bili_result.duration - origin_metadata.duration)
         scores.append(score)
+        bili_result.score = score
 
     best_score = min(scores)
     return bili_results[scores.index(best_score)]
@@ -82,9 +83,6 @@ async def get_duration_task(mdata: bili_metadata) -> int:
                 return data['data']['duration']
 
         return 0
-
-
-
 
 
 def levenshtein_distance(s: str, t: str) -> int:
@@ -138,7 +136,7 @@ async def download_audio(metadata: bili_metadata) -> io.BytesIO:
         loaded = 0
         async for chunk in audio_resp.content.iter_chunked(10000):
             loaded += len(chunk)
-            print(f'\r[bili_download_audio] Progress: {loaded} / {size}', end='')
+            print(f'\r[bili_download_audio] {metadata.title}: {loaded} / {size}', end='')
             memfile.write(chunk)
         print("\n[bili_download_audio] Complete!")
         memfile.seek(0)
@@ -153,11 +151,10 @@ async def test():
                         )
     target = 442316000
     origin_meta = await fetch_mp3_metadata(target)
-    bili_results = await bili_search(f'{origin_meta.artist} - {origin_meta.name}')
+    bili_results = await bili_search(f'{origin_meta.artist} - {origin_meta.title}')
     best_result = await get_best(bili_results, origin_meta)
     print(json.dumps(best_result.__dict__, ensure_ascii=False, indent=2))
 
 
 if __name__ == '__main__':
     asyncio.run(test())
-

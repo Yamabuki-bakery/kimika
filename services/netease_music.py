@@ -36,7 +36,7 @@ async def download_mp3(song_id: int) -> io.BytesIO:
         loaded = 0
         async for chunk in audio_resp.content.iter_chunked(100000):
             loaded += len(chunk)
-            print(f'\r[download_mp3] Progress: {loaded} / {size}', end='')
+            print(f'\r[download_mp3] {song_id}: {loaded} / {size}', end='')
             memfile.write(chunk)
         print("\n[download_mp3] Complete!")
         memfile.seek(0)

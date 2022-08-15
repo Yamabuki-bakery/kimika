@@ -2,7 +2,7 @@ import io, json, re
 
 
 class netease_metadata:
-    name: str
+    title: str
     artist: str
     album: str
     year: int
@@ -14,7 +14,7 @@ class netease_metadata:
 
     def __init__(self, metadata_json: str):
         data = json.loads(metadata_json)
-        self.name = data['name']
+        self.title = data['name']
         self.artist = data['artist']
         self.album = data['album']
         self.year = data['year']
@@ -28,20 +28,22 @@ class bili_metadata:
     sid: int
     pubdate: int
     title: str
-    author: str
+    artist: str  # the [author] attribute in bili api
     audio_url: str | None
     quality: str | None
     duration: int | None
     format: str
+    score: int  # matching score, lower is better
 
     def __init__(self, result_record: dict):
         self.sid = result_record['id']
         self.pubdate = result_record['pubdate']
         self.title = result_record['title']
-        self.author = result_record['author']
+        self.artist = result_record['author']
         self.duration = None
-        self.get_audio_url(result_record)
         self.format = 'm4a'
+        self.get_audio_url(result_record)
+        self.score = 999
 
     def get_audio_url(self, result_record: dict):
         best_quality = {

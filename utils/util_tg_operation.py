@@ -4,7 +4,6 @@ import os
 import time
 from datetime import datetime, timedelta
 
-import eyed3, mutagen
 import pyrogram
 import pyrogram.errors
 from pyrogram.raw import functions
@@ -16,6 +15,7 @@ from services.netease_music import fetch_mp3_metadata, download_mp3
 from services import bili_music
 from myTypes.MemberCredit import MemberCredit
 from utils.util_str2filename import slugify
+from utils.util_media_metatag import apply_metadata
 
 FILE_ID_CACHE = {}
 
@@ -53,7 +53,7 @@ async def speak(chat_id: int, msg_choices: (str, list), reply_to_msg_id: int = N
             else:
                 returns.append(await app.send_message(chat_id, msg, reply_to_message_id=reply_to_msg_id))
         except (KeyError, pyrogram.errors.FileReferenceExpired):
-            logging.error(f'[Send Media] File reference invalid')
+            logging.warning(f'[Send Media] File reference invalid')
             mediaid = (await find_file_id(msg)).split('/')[1]
             if msg.startswith('kimika-sticker/'):
                 returns.append(await app.send_sticker(chat_id, mediaid, reply_to_message_id=reply_to_msg_id))
@@ -109,10 +109,10 @@ class WorkingFlags:
         logging.info(f'[WorkingFlags] the {chat_id} has {self.chat_action_chats[chat_id]}')
 
     def remove(self, chat_id: int):
-        logging.info(f'[WorkingFlags] the {chat_id} has {self.chat_action_chats[chat_id]}')
         if chat_id not in self.chat_action_chats:
             return
         else:
+            logging.info(f'[WorkingFlags] the {chat_id} has {self.chat_action_chats[chat_id] - 1}')
             if self.chat_action_chats[chat_id] == 1:
                 self.chat_action_chats.pop(chat_id)
             else:
@@ -153,11 +153,11 @@ async def send_song(song_id: int, chat_id: int):
             if cache_msg is None:
                 raise ValueError("[send_song] Cache msg does not exist.")
             await cache_msg.forward(chat_id=chat_id)
-            WORKING_FLAGS.remove(chat_id)
         except (pyrogram.errors.RPCError, ValueError, AttributeError) as err:
             logging.warning(f"[send_song] 🎵 Cache expired, song {song_id}, try again.")
             await songDao.delete_song_cache(song_id)
-            await send_song(song_id, chat_id)
+            asyncio.create_task(send_song(song_id, chat_id))
+        WORKING_FLAGS.remove(chat_id)
         return
 
     download_mp3_task = asyncio.create_task(download_mp3(song_id))
@@ -175,11 +175,12 @@ async def send_song(song_id: int, chat_id: int):
         audio_data = await download_mp3_task
         caption = ''
         filename = 'music.mp3'
+        this_metadata = n_metadata
     except Exception as err:
         logging.warning(f'🎵[download_mp3_task] Netease mp3 - something went wrong! {err} using bilibili instead!')
 
         # use bilibili instead
-        bili_results = await bili_music.bili_search(f'{n_metadata.artist} - {n_metadata.name}')
+        bili_results = await bili_music.bili_search(f'{n_metadata.artist} - {n_metadata.title}')
         if bili_results is None:
             logging.error(f'🎵[bili_music_result] bili_results do not return anything!')
             await speak(chat_id=chat_id, msg_choices='kimika-sticker/6')  # http cat 402 payment required
@@ -190,6 +191,7 @@ async def send_song(song_id: int, chat_id: int):
             audio_data = await bili_music.download_audio(best_result)
             caption = '🅱'
             filename = f'music.{best_result.format}'
+            this_metadata = best_result
         except Exception as err:
             logging.error(f'🎵[bili_music_download] Cannot download audio file! {err}')
             await speak(chat_id=chat_id, msg_choices='kimika-sticker/6')  # http cat 402 payment required
@@ -200,32 +202,49 @@ async def send_song(song_id: int, chat_id: int):
     media_tempfile = open(filename, mode='w+b')
     media_tempfile.write(audio_data.getvalue())
     media_tempfile.close()
-    # todo: mutagen 不幹了
-    if filename.endswith('mp3'):
-        mp3_obj = eyed3.load(filename)
-        mp3_obj.initTag()
-        # mp3_obj.tag.album = n_metadata.album
-        # mp3_obj.tag.artist = n_metadata.artist
-        # mp3_obj.tag.title = n_metadata.name
-        # mp3_obj.tag.images.set(3, n_metadata.album_pic.read(), n_metadata.cover_type)
-        # mp3_obj.tag.comments.set('Downloaded by Kimika')
-        mp3_obj.tag.save()
+
+    # 只給匹配良好的歌打 tag
+    if isinstance(this_metadata, myTypes.MusicMetadata.netease_metadata) or \
+            (isinstance(this_metadata, myTypes.MusicMetadata.bili_metadata) and this_metadata.score < 15):
+        # todo: mutagen 不幹了
+        apply_metadata(this_metadata, filename)
+        # if False: #filename.endswith('mp3'):
+        #     mp3_obj = eyed3.load(filename)
+        #     mp3_obj.initTag()
+        #     mp3_obj.tag.album = n_metadata.album
+        #     mp3_obj.tag.artist = this_metadata.artist
+        #     mp3_obj.tag.title = this_metadata.title
+        #     mp3_obj.tag.images.set(3, n_metadata.album_pic.read(), n_metadata.cover_type)
+        #     mp3_obj.tag.comments.set('Downloaded by Kimika')
+        #     mp3_obj.tag.save()
+    else:
+        logging.warning(f"[send_song] {this_metadata.title} 和 {n_metadata.title} 匹配過於惡俗")
 
     sent = await app.send_audio(
         chat_id=chat_id,
         audio=filename,
-        duration=n_metadata.duration,
-        performer=n_metadata.artist,
-        title=n_metadata.name,
+        duration=this_metadata.duration,
+        performer=this_metadata.artist,
+        title=this_metadata.title,
         thumb=n_metadata.album_pic,
-        file_name=f'{slugify(n_metadata.artist)} - {slugify(n_metadata.name)}.mp3',
+        file_name=f'{slugify(this_metadata.artist)} - {slugify(this_metadata.title)}.{filename.split(".")[-1]}',
         protect_content=False,
         # caption=caption
     )
-    logging.info(f'[send_song] 🎵 Music sent! {chat_id}, {n_metadata.name}')
+    logging.info(f'[send_song] 🎵 Music sent! {chat_id}, {this_metadata.title}')
     WORKING_FLAGS.remove(chat_id)
-    cache_msg = await sent.forward(KIMIKACACHE)
-    await songDao.save_song_cache(song_id, cache_msg.id)
+
+    # 匹配不良的音樂跳過緩存並且增加大便反應
+    if isinstance(this_metadata, myTypes.MusicMetadata.netease_metadata) or \
+        (isinstance(this_metadata, myTypes.MusicMetadata.bili_metadata) and this_metadata.score < 15):
+        cache_msg = await sent.forward(KIMIKACACHE)
+        await songDao.save_song_cache(song_id, cache_msg.id)
+    else:
+        try:
+            await sent.react('💩', True)
+        except pyrogram.errors.RPCError:
+            await speak(chat_id, '💩', sent.id)
+
     if os.path.exists(filename):
         os.remove(filename)
     else:
