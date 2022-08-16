@@ -1,3 +1,5 @@
+import asyncio
+
 import global_var
 import logging
 import pyrogram
@@ -24,6 +26,9 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
 
     if message.service and message.service == pyrogram.enums.MessageServiceType.NEW_CHAT_MEMBERS:
         return
+
+    # try waiting for possible watching list
+    await asyncio.sleep(0.5)
 
     if message.from_user.id in global_var.NEW_MEMBER_WATCHING_LIST and \
           message.chat.id == global_var.NEW_MEMBER_WATCHING_LIST[message.from_user.id]['chat']:
