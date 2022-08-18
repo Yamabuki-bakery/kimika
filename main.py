@@ -29,7 +29,9 @@ async def bot_init():
         api_id=CONFIG["api_id"], api_hash=CONFIG["api_hash"],
         app_version=CONFIG["app_title"] + " 0.0.1",
         device_model="Xiaomi MI MIX 2S",
-        ipv6=False
+        ipv6=False,
+        workers=1,
+        sleep_threshold=30,
     )
 
     await global_var.app.start()
