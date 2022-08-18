@@ -40,7 +40,7 @@ def is_replay(client: pyrogram.Client, handler: callable, message: pyrogram.type
         logging.warning(f'[anti_replay] [{handler.__name__}] message {message.id} at {message.chat.id} replayed!')
         return True
     else:
-        if len(global_var.ANTI_REPLAY_LIST) == 10000:
+        if len(global_var.ANTI_REPLAY_LIST) == 3000:
             logging.info(f'[anti_replay] Clearing ANTI_REPLAY_LIST')
             global_var.ANTI_REPLAY_LIST = []
         global_var.ANTI_REPLAY_LIST.append(query_id)
