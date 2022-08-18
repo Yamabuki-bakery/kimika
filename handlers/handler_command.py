@@ -1,6 +1,6 @@
 import logging
 import re
-import pyrogram
+import asyncio
 import random
 
 import pyrogram.errors
@@ -46,19 +46,19 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
             await commands.china(app, message, reply_to_possibility)
 
         if command_list.index(command_called) == 4:  # debug
-            await commands.debug(message, reply_to_possibility)
+            asyncio.create_task(commands.debug(message, reply_to_possibility))
 
         if command_list.index(command_called) == 5:  # member
-            await commands.member(app, message, reply_to_possibility)
+            asyncio.create_task(commands.member(app, message, reply_to_possibility))
 
         if command_list.index(command_called) == 6:  # lowCreditUsers
             pass
 
         if command_list.index(command_called) == 7:  # help
-            await commands.help(app, message, reply_to_possibility)
+            asyncio.create_task(commands.help(app, message, reply_to_possibility))
 
         if command_list.index(command_called) == 8:  # credit
-            await commands.credit(app, message, reply_to_possibility)
+            asyncio.create_task(commands.credit(app, message, reply_to_possibility))
 
         if command_list.index(command_called) == 9:  # wipe
             await commands.wipe(app, message, reply_to_possibility)
@@ -83,19 +83,35 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
 
 
     else:
-        if await imply_chain.reaction(app, message):
-            return
+        asyncio.create_task(imply_chain_func(
+            client=client,
+            message=message,
+            reply_to_possibility=reply_to_possibility,
+            reply_to_msg_id=reply_to_msg_id,
+            again=again,
+        ))
 
-        if await imply_chain.netease_link(app, message, reply_to_possibility):
-            return
+        # message.stop_propagation()
 
-        if again != 0 and reply_to_msg_id is not None:
-            logging.info(f'[at_command] No command found, try the replied message again')
-            try_this = await client.get_messages(message.chat.id, reply_to_msg_id)
-            await at_command(client, try_this, 0, random.random())
-            return
 
-        if await imply_chain.random_reply(app, message, reply_to_possibility):
-            return
+async def imply_chain_func(**kwargs):
+    app = kwargs['client']
+    message = kwargs['message']
+    reply_to_possibility = kwargs['reply_to_possibility']
+    reply_to_msg_id = kwargs['reply_to_msg_id']
+    again = kwargs['again']
 
-            # message.stop_propagation()
+    if await imply_chain.reaction(app, message):
+        return
+
+    if await imply_chain.netease_link(app, message, reply_to_possibility):
+        return
+
+    if again != 0 and reply_to_msg_id is not None:
+        logging.info(f'[at_command] No command found, try the replied message again')
+        try_this = await app.get_messages(message.chat.id, reply_to_msg_id)
+        asyncio.create_task(at_command(app, try_this, 0, random.random()))
+        return
+
+    if await imply_chain.random_reply(app, message, reply_to_possibility):
+        return

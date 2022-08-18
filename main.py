@@ -30,11 +30,15 @@ async def bot_init():
         app_version=CONFIG["app_title"] + " 0.0.1",
         device_model="Xiaomi MI MIX 2S",
         ipv6=False,
-        workers=1,
+        workers=10,
         sleep_threshold=30,
     )
 
     await global_var.app.start()
+
+    global_var.app.add_handler(pyrogram.handlers.ChatMemberUpdatedHandler(
+        handlers.new_member_update
+    ), group=-4)
 
     # kimika command
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
@@ -78,6 +82,8 @@ async def bot_init():
         handlers.verify_new_member,
         filters.incoming & filters.group & filters.new_chat_members
     ), group=1)
+
+
 
     await pyrogram.idle()
 

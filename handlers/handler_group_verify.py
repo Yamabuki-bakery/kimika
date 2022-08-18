@@ -33,7 +33,7 @@ def add2watch(message: pyrogram.types.Message):
                 'time': time.time()
             }
         }
-        )
+    )
     asyncio.create_task(del_from_watch(message))
 
 
@@ -42,8 +42,16 @@ async def del_from_watch(message: pyrogram.types.Message):
     global_var.NEW_MEMBER_WATCHING_LIST.pop(message.from_user.id)
 
 
+async def new_member_update(client, update):
+    logging.info(f'[new_member_update] update coming!')
+    print(str(update))
+
 @anti_replay
 async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Message):
+    asyncio.create_task(verify_new_member_task(app, message))
+
+
+async def verify_new_member_task(app: pyrogram.Client, message: pyrogram.types.Message):
     if message.service and message.service == pyrogram.enums.MessageServiceType.NEW_CHAT_MEMBERS:
         chatid = message.chat.id
         add2watch(message)
@@ -68,11 +76,11 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
     use_username: int = verify_scheme[3]
     use_new_account: int = verify_scheme[4]
     verify_scheme_str = "" \
-                    + ("channel " if use_channel is not None else "") \
-                    + ("photo " if use_photo else "") \
-                    + ("bio " if use_bio else "") \
-                    + ("username " if use_username  else "") \
-                    + ("new account " if use_new_account else "")
+                        + ("channel " if use_channel is not None else "") \
+                        + ("photo " if use_photo else "") \
+                        + ("bio " if use_bio else "") \
+                        + ("username " if use_username else "") \
+                        + ("new account " if use_new_account else "")
     logging.info(f'[verify_new_member] 🆕️ Group {chatid} verify new member, with {verify_scheme_str}')
 
     deny_flags = JoinDenyFlags()
@@ -123,7 +131,7 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
 
     if deny_flags.is_accept():
         logging.info(f'[verify_new_member] New member {new_member.first_name} is accepted')
-        
+
         await app.send_message(chat_id=chatid,
                                text=f"[@{new_member.first_name}](tg://user?id={new_member.id}) was accepted by quick verification.")
         rule_msg = await app.send_message(chat_id=chatid, text=GALGROUP_RULE)
@@ -159,7 +167,8 @@ async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Messag
             await app.restrict_chat_member(chatid, get_sender_id(message), old_permissions, until_date)
 
 
-async def get_current_permission(chat_id: int, target_id: int) -> tuple[pyrogram.types.ChatPermissions | None, datetime | None]:
+async def get_current_permission(chat_id: int, target_id: int) -> tuple[
+    pyrogram.types.ChatPermissions | None, datetime | None]:
     try:
         chat_member = await global_var.app.get_chat_member(chat_id, target_id)
         if not chat_member:
