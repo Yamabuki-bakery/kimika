@@ -50,7 +50,7 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
         await app.ban_chat_member(GALGROUP, message.from_user.id)
         text = f'🛑 **New banned user**\n\n**ID**: {message.from_user.id}\n' \
                f'**Name**: [{message.from_user.first_name}](tg://user?id={message.from_user.id})\n' \
-               f'**User**: {"@" + message.from_user.username if message.from_user.username else "None"}\n\n' \
+               f'**Username**: {"@" + message.from_user.username if message.from_user.username else "None"}\n\n' \
                f'👋🏻 **Action**: Kicked\n' \
                f'🤔 **Reason**: Abuse Telegram bug'
         await app.send_message(GALGROUP, text)

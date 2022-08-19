@@ -5,6 +5,7 @@ from datetime import timedelta
 from botConfig import *
 from utils.util_tg_operation import speak, get_sender_id, get_sender_name, get_user_credit, get_chat_credit
 
+
 class UniUser:
     type: int  # 0: user; 1: chat
     uid: int
@@ -23,6 +24,7 @@ class UniUser:
             info: pyrogram.types.Chat = await global_var.app.get_chat(uid)
             self.display_name = info.title
             self.username = info.username
+
 
 async def killer_list(app: pyrogram.Client, message: pyrogram.types.Message):
     killerDao = global_var.db.killerDao
@@ -68,7 +70,7 @@ async def killer_del(app: pyrogram.Client, message: pyrogram.types.Message, rtp:
 
         resp_text = f'🤔**Removed Killer**\n\n' \
                     f'**ID**: [{target_user.display_name}](tg://user?id={target_id})\n' \
-                    f'**User**: {"@" + target_user.username if target_user.username else "None"}\n\n' \
+                    f'**Username**: {"@" + target_user.username if target_user.username else "None"}\n\n' \
                     f'👋🏻 **Action**: Revoked\n' \
                     f'🤔 **Reason**: Invoked by admin [{get_sender_name(message)}](tg://user?id={caller_id})'
 
@@ -111,7 +113,7 @@ async def killer_add(app: pyrogram.Client, message: pyrogram.types.Message, rtp:
 
         resp_text = f'🤔**New Killer**\n\n' \
                     f'**ID**: [{target_user.display_name}](tg://user?id={target_id})\n' \
-                    f'**User**: {"@" + target_user.username if target_user.username else "None"}\n\n' \
+                    f'**Username**: {"@" + target_user.username if target_user.username else "None"}\n\n' \
                     f'👋🏻 **Action**: Granted\n' \
                     f'🤔 **Reason**: Invoked by admin [{get_sender_name(message)}](tg://user?id={caller_id})'
 
@@ -185,7 +187,7 @@ async def wipe(app: pyrogram.Client, message: pyrogram.types.Message, rtp: float
 
         resp_text = f'[🛑](tg://user?id={ESUONEGOV}) **New banned user**\n\n' \
                     f'**ID**: [{target_id}](tg://user?id={target_id})\n' \
-                    f'**User**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
+                    f'**Username**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
                     f'👋🏻 **Action**: Kicked with history wiped\n' \
                     f'🤔 **Reason**: Invoked by [{get_sender_name(message)}](tg://user?id={caller_id})'
 
@@ -252,7 +254,7 @@ async def kick(app: pyrogram.Client, message: pyrogram.types.Message, rtp: float
 
         resp_text = f'[🛑](tg://user?id={ESUONEGOV}) **New banned user**\n\n' \
                     f'**ID**: [{target_id}](tg://user?id={target_id})\n' \
-                    f'**User**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
+                    f'**Username**: {"@" + target_credit.username if target_credit.username else "None"}\n\n' \
                     f'👋🏻 **Action**: Kicked\n' \
                     f'🤔 **Reason**: Invoked by [{get_sender_name(message)}](tg://user?id={caller_id})'
 
