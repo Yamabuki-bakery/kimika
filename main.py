@@ -83,8 +83,6 @@ async def bot_init():
         filters.incoming & filters.group & filters.new_chat_members
     ), group=1)
 
-
-
     await pyrogram.idle()
 
 

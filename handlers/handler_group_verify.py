@@ -7,6 +7,7 @@ import global_var
 import pyrogram
 import time
 
+import myTypes
 from botConfig import *
 from utils.util_anti_replay import anti_replay
 from utils.util_tg_operation import get_sender_id, get_user_credit
@@ -46,6 +47,7 @@ async def new_member_update(client, update):
     logging.info(f'[new_member_update] update coming!')
     print(str(update))
 
+
 @anti_replay
 async def verify_new_member(app: pyrogram.Client, message: pyrogram.types.Message):
     asyncio.create_task(verify_new_member_task(app, message))
@@ -69,7 +71,6 @@ async def verify_new_member_task(app: pyrogram.Client, message: pyrogram.types.M
 
     check_permission_task = asyncio.create_task(get_current_permission(chatid, get_sender_id(message)))
 
-    await message.delete()
     use_channel: str | None = verify_scheme[0]
     use_photo: int = verify_scheme[1]
     use_bio: int = verify_scheme[2]
@@ -85,19 +86,41 @@ async def verify_new_member_task(app: pyrogram.Client, message: pyrogram.types.M
 
     deny_flags = JoinDenyFlags()
 
-    if use_channel is not None:
-        in_channel = False
+    async def check_channel_member(channel_username: str, member: pyrogram.types.User) -> bool:
         results = []
+        async for m in app.get_chat_members(channel_username, query=member.first_name,
+                                            filter=pyrogram.enums.ChatMembersFilter.SEARCH):
+            results.append(m)
+        for chan_member in results:
+            if chan_member.user.id == member.id:
+                logging.info(
+                    f'[verify_new_member] ✅🌐 User {member.id} {member.first_name} found in (API - search) channel')
+                return True
+        return False
+
+    async def check_credit(member: pyrogram.types.User, chat_id: int) -> myTypes.MemberCredit:
+        retry = 3
+        while True:
+            try:
+                result = await get_user_credit(member, chat_id)
+                return result
+            except InterruptedError:
+                logging.warning(f'[verify_new_member] Get credit failed, retrying: {retry}')
+                retry -= 1
+                await asyncio.sleep(2)
+                if retry == 0:
+                    result = await get_user_credit(member, chat_id, True)
+                    return result
+
+    if use_channel is not None:
+        check_channel_task = asyncio.create_task(check_channel_member(use_channel, new_member))
+
+    if use_bio or use_photo or use_username or use_new_account:
+        credit_task = asyncio.create_task(check_credit(new_member, chatid))
+
+    if use_channel is not None:
         try:
-            async for m in app.get_chat_members(use_channel, query=new_member.first_name,
-                                                filter=pyrogram.enums.ChatMembersFilter.SEARCH):
-                results.append(m)
-            for chan_member in results:
-                if chan_member.user.id == new_member.id:
-                    logging.info(
-                        f'[verify_new_member] ✅🌐 User {new_member.id} {new_member.first_name} found in (API - search) channel')
-                    in_channel = True
-                    break
+            in_channel = await check_channel_task
         except pyrogram.errors.RPCError as e:
             logging.error(f'[verify_new_member] Error when checking channel member.\n {e}')
             return
@@ -107,18 +130,8 @@ async def verify_new_member_task(app: pyrogram.Client, message: pyrogram.types.M
             deny_flags.not_chan_member = True
 
     if use_bio or use_photo or use_username or use_new_account:
-        retry = 3
-        while True:
-            try:
-                credit = await get_user_credit(new_member, chatid)
-                break
-            except InterruptedError:
-                logging.warning(f'[verify_new_member] Get credit failed, retrying: {retry}')
-                retry -= 1
-                await asyncio.sleep(2)
-                if retry == 0:
-                    credit = await get_user_credit(new_member, chatid, True)
-                    break
+
+        credit = await credit_task
 
         if (not credit.photo) and use_photo:
             deny_flags.no_photo = True
@@ -126,7 +139,7 @@ async def verify_new_member_task(app: pyrogram.Client, message: pyrogram.types.M
             deny_flags.no_bio = True
         if credit.new_account and use_new_account:
             deny_flags.new_account = True
-        if (credit.username is None) and use_username:
+        if credit.username is None and use_username:
             deny_flags.no_username = True
 
     if deny_flags.is_accept():
@@ -139,6 +152,7 @@ async def verify_new_member_task(app: pyrogram.Client, message: pyrogram.types.M
         await rule_msg.delete()
         return
     else:
+        asyncio.create_task(message.delete())
         logging.info(f'[verify_new_member] New member {new_member.first_name} is denied')
         prompt_channel = '' + (f' * 訂閱這個頻道 @{use_channel}\n' if deny_flags.not_chan_member else '')
         prompt_photo = '' + (' * 設置大頭貼 (並對所有人公開)\n' if deny_flags.no_photo else '')
