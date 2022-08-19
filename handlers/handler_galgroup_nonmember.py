@@ -31,9 +31,16 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
     await asyncio.sleep(0.5)
 
     if message.from_user.id in global_var.NEW_MEMBER_WATCHING_LIST and \
-          message.chat.id == global_var.NEW_MEMBER_WATCHING_LIST[message.from_user.id]['chat']:
-        logging.info(f'[galgroup_non_member] ⚠️ user {message.from_user.first_name} is in watching list, delete this message')
-        await message.delete()
+            message.chat.id == global_var.NEW_MEMBER_WATCHING_LIST[message.from_user.id]['chat']:
+        logging.info(
+            f'[galgroup_non_member] ⚠️ user {message.from_user.first_name} is in watching list, delete this message')
+
+        async def save_delete(mmsg: pyrogram.types.Message):
+            await mmsg.forward(KIMIKADUSTBIN)
+            await mmsg.delete()
+
+        asyncio.create_task(save_delete(message))
+
         return
 
         # logging.info(f'🔍 User {message.from_user.id} {message.from_user.first_name} sent message {message.id},'
@@ -43,9 +50,10 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
         # logging.info(f'User {message.from_user.id} {message.from_user.first_name} is in the chat')
         pass
     else:
-        logging.warning(f'[galgroup_non_member] ⚠️ User {message.from_user.id} {message.from_user.first_name} is NOT in the chat!')
+        logging.warning(
+            f'[galgroup_non_member] ⚠️ User {message.from_user.id} {message.from_user.first_name} is NOT in the chat!')
         # await app.delete_user_history(GALGROUP, message.from_user.id)
-        await message.forward(KIMIKACACHE)
+        await message.forward(KIMIKADUSTBIN)
         await app.delete_messages(GALGROUP, message.id)
         await app.ban_chat_member(GALGROUP, message.from_user.id)
         text = f'🛑 **New banned user**\n\n**ID**: {message.from_user.id}\n' \
@@ -77,7 +85,8 @@ async def check_common_chat(user_id, first_name, target_chat, app: pyrogram.Clie
                 await galMembersDao.update_member(user_id, first_name, int(time.time()))
                 break
     except pyrogram.errors.PeerIdInvalid:
-        logging.error(f'[check_common_chat] ❌ Cannot get common group due to PEER INVALID, try get chat member instead.')
+        logging.error(
+            f'[check_common_chat] ❌ Cannot get common group due to PEER INVALID, try get chat member instead.')
         # chat_member = await app.get_chat_member(target_chat, user_id)
         results = []
         async for m in app.get_chat_members(target_chat, query=first_name,

@@ -181,7 +181,7 @@ async def wipe(app: pyrogram.Client, message: pyrogram.types.Message, rtp: float
             raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 嘗試橄欖老群友')
 
         # 執行踢人
-        await target_msg.forward(KIMIKACACHE)
+        await target_msg.forward(KIMIKADUSTBIN)
         await app.delete_user_history(chat_id=message.chat.id, user_id=target_id)
         await app.ban_chat_member(chat_id=message.chat.id, user_id=target_id)
 
