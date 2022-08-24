@@ -49,6 +49,7 @@ async def forget(client: pyrogram.Client, message: pyrogram.types.Message) -> bo
     result = await learningDao.del_answer(message.chat.id, target_msg.id)
     if result:
         logging.info(f'[forget] {target_message_text} forgot!!')
+        await target_msg.delete()
         return True
     else:
         return False
