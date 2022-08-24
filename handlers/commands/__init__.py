@@ -8,3 +8,4 @@ from .member import member
 from .debug import debug
 from .help import help
 from .mt_exec import mt_exec
+from .learn import learn

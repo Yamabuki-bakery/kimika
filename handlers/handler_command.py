@@ -20,7 +20,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
                     'debug', 'member', 'lowCreditUsers', 'help',
                     'credit', 'wipe', 'kick', 'killer add',
                     'killer del', 'killer', 'ja', 'diss',
-                    '\0\1\2\3', 'チャイナ', 'シナ']
+                    '\0\1\2\3', 'チャイナ', 'シナ', 'learn']
     command_called = None
     logging.info(f'[command] Coming Message [{message.text or message.caption or ""}]')
     for command in command_list:
@@ -81,6 +81,9 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
         if command_list.index(command_called) == 0:  # exec
             await commands.mt_exec(app, message, reply_to_possibility)
 
+        if command_list.index(command_called) == 19:  # learn
+            await commands.learn(app, message)
+
 
     else:
         asyncio.create_task(imply_chain_func(
@@ -105,6 +108,9 @@ async def imply_chain_func(**kwargs):
         return
 
     if await imply_chain.netease_link(app, message, reply_to_possibility):
+        return
+
+    if await imply_chain.learning(app, message):
         return
 
     if again != 0 and reply_to_msg_id is not None:
