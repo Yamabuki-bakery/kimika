@@ -110,7 +110,10 @@ async def imply_chain_func(**kwargs):
     if await imply_chain.netease_link(app, message, reply_to_possibility):
         return
 
-    if await imply_chain.learning(app, message):
+    if await imply_chain.learning(app, message, again == 0):
+        return
+
+    if await imply_chain.forget(app, message):
         return
 
     if again != 0 and reply_to_msg_id is not None:

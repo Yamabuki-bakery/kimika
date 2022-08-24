@@ -30,8 +30,11 @@ class LearningDao:
             return None
 
         for record in rows:
-            if record[5] in keyword:
+            if record[5] in keyword.lower():
                 results.append(record)
+
+        if not results:
+            return None
 
         result = random.choice(results)
 
@@ -67,9 +70,16 @@ class LearningDao:
         )
         await self.__kimikaDB.commit()
 
-    async def del_answer(self, chat_id: int, learnt_msg_id: int):
+    async def del_answer(self, chat_id: int, learnt_msg_id: int) -> bool:
+        cursor = await self.__kimikaDB.execute('SELECT * FROM learning WHERE fromChatId=:cid AND learntRespMsgId=:lid',
+                                               {'cid': chat_id, 'lid': learnt_msg_id})
+        rows = await cursor.fetchall()
+        if not rows:
+            return False
+
         await self.__kimikaDB.execute(
             'DELETE FROM learning WHERE fromChatId=:cid AND learntRespMsgId=:lid',
             {'cid': chat_id, 'lid': learnt_msg_id}
         )
         await self.__kimikaDB.commit()
+        return True

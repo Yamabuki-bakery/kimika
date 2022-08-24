@@ -10,7 +10,7 @@ async def netease_link(client: pyrogram.Client, message: pyrogram.types.Message,
     if results is not None:
         song_id = results[1]
     else:
-        results = re.search(r'(\d{1,12})$', message_text)
+        results = re.search(r'(\d{4,12})$', message_text)
         if results is not None:
             song_id = results[1]
         else:

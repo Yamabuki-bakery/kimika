@@ -11,9 +11,10 @@ LEARN_HELP = \
     '''學習如何回覆一個關鍵詞，用法：
 回覆一個作爲答案的消息，然後
 
-kimika learn <keyword>
+`kimika learn <keyword>`
 
-keyword 字數限制 3~20 字'''
+keyword 字數限制 3~20 字
+撤銷學習：使用 forget 回覆一條「我董力！」提示消息'''
 
 
 async def learn(client: pyrogram.Client, message: pyrogram.types.Message):
@@ -39,7 +40,7 @@ async def learn(client: pyrogram.Client, message: pyrogram.types.Message):
 
     except ValueError as err:
         logging.error(f'[learn] {err}')
-        help_msg = await message.reply_text(LEARN_HELP)
+        help_msg = await message.reply_text(LEARN_HELP, parse_mode=pyrogram.enums.ParseMode.MARKDOWN)
         asyncio.create_task(del_msg_after(help_msg, 10))
         return False
 
@@ -48,7 +49,7 @@ async def learn(client: pyrogram.Client, message: pyrogram.types.Message):
         answer_msg = await client.get_messages(chat_id=message.chat.id, message_ids=reply_to_msg_id)
         cached_msg = await answer_msg.forward(botConfig.KIMIKACACHE)
 
-        learnt_resp_msg = await answer_msg.reply_text(f'{keyword}\n我董力！')
+        learnt_resp_msg = await answer_msg.reply_text(f'{keyword}，\n我董力！ 😘')
 
         learning_record = LearningRecord()
         learning_record.answer_msg_id = cached_msg.id
