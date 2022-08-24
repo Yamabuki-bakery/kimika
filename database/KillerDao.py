@@ -1,4 +1,7 @@
 class KillerDao:
+    # table killer
+    # col userid
+    # col chatid
 
     def __init__(self, db):
         from . import KimikaDB
