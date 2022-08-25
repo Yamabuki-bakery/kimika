@@ -16,11 +16,11 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
     (reply_to_possibility, reply_to_msg_id) = (0.75, message.reply_to_message.id) if message.reply_to_message else (
         -1, None)
     # return
-    command_list = ['execute', 'article', 'giveme', 'china',
+    command_list = ['execute', 'learn', 'giveme', 'china',
                     'debug', 'member', 'lowCreditUsers', 'help',
                     'credit', 'wipe', 'kick', 'killer add',
                     'killer del', 'killer', 'ja', 'diss',
-                    '\0\1\2\3', 'チャイナ', 'シナ', 'learn']
+                    '\0\1\2\3', 'チャイナ', 'シナ', 'article']
     command_called = None
     logging.info(f'[command] Coming Message [{message.text or message.caption or ""}]')
     for command in command_list:
@@ -36,7 +36,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
         if command_list.index(command_called) == 15:  # diss
             await commands.diss(app, message, reply_to_possibility)
 
-        if command_list.index(command_called) == 1:  # aritcle
+        if command_list.index(command_called) == 19:  # aritcle
             pass
 
         if command_list.index(command_called) == 2:  # giveme
@@ -81,7 +81,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
         if command_list.index(command_called) == 0:  # exec
             await commands.mt_exec(app, message, reply_to_possibility)
 
-        if command_list.index(command_called) == 19:  # learn
+        if command_list.index(command_called) == 1:  # learn
             await commands.learn(app, message)
 
 
