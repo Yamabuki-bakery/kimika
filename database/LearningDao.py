@@ -30,7 +30,7 @@ class LearningDao:
             return None
 
         for record in rows:
-            if record[5] in keyword.lower():
+            if record[5].lower() in keyword.lower():
                 results.append(record)
 
         if not results:

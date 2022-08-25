@@ -13,7 +13,7 @@ LEARN_HELP = \
 
 `kimika learn <keyword>`
 
-keyword 字數限制 3~20 字
+keyword 字數限制 2~20 字
 撤銷學習：使用 forget 回覆一條「我董力！」提示消息'''
 
 
@@ -28,14 +28,14 @@ async def learn(client: pyrogram.Client, message: pyrogram.types.Message):
         if reply_to_msg_id is None:
             raise ValueError('沒有 reply 到一條 msg 上！')
 
-        matches = re.search(r'learn (.+)', message_text)
+        matches = re.search(r'learn (\S+)', message_text)
 
         if matches:
             keyword = matches[1]
         else:
             raise ValueError('沒有找到 keyword！')
 
-        if len(keyword) < 3 or len(keyword) > 20:
+        if len(keyword) < 2 or len(keyword) > 20:
             raise ValueError(f'keyword 長度 {len(keyword)} 過於惡俗！')
 
     except ValueError as err:
