@@ -1,8 +1,11 @@
 import logging
+import random
 
 import botConfig
 import global_var
 import pyrogram
+
+from myTypes.LearningRecord import LearningRecord
 
 
 async def learning(client: pyrogram.Client, message: pyrogram.types.Message, twice=False) -> bool:
@@ -16,13 +19,18 @@ async def learning(client: pyrogram.Client, message: pyrogram.types.Message, twi
 
     learningDao = global_var.db.learningDao
 
-    learning_record = await learningDao.get_answers(message.chat.id, message_text)
+    learning_records = await learningDao.get_answers(message.chat.id, message_text)
 
-    if learning_record is None:
+    if not learning_records:
         return False
 
+    learning_record: LearningRecord = random.choice(learning_records)
+
     answer_msg = await client.get_messages(botConfig.KIMIKACACHE, learning_record.answer_msg_id)
-    await answer_msg.copy(message.chat.id, reply_to_message_id=reply_to_msg_id)
+    if reply_to_msg_id:
+        await answer_msg.copy(message.chat.id, reply_to_message_id=reply_to_msg_id)
+    else:
+        await answer_msg.forward(message.chat.id)
     return True
 
 
