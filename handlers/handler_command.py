@@ -115,8 +115,8 @@ async def invoke_imply(client: pyrogram.Client, message: pyrogram.types.Message)
         message=message,
         reply_to_possibility=1,
         reply_to_msg_id=reply_to_msg_id,
-        again=0,
-        no_random=True,
+        again=1,
+        hash_sign=True
     ))
 
 
@@ -126,7 +126,7 @@ async def imply_chain_func(**kwargs):
     reply_to_possibility = kwargs.get('reply_to_possibility')
     reply_to_msg_id = kwargs.get('reply_to_msg_id')
     again = kwargs.get('again')
-    no_random = kwargs.get('no_random')
+    hash_sign = kwargs.get('hash_sign')
 
     if await imply_chain.reaction(app, message):
         return
@@ -140,13 +140,13 @@ async def imply_chain_func(**kwargs):
     if await imply_chain.learning(app, message, again == 0):
         return
 
-    if again != 0 and reply_to_msg_id is not None:
+    if again != 0 and reply_to_msg_id is not None and not hash_sign:
         logging.info(f'[at_command] No command found, try the replied message again')
         try_this = await app.get_messages(message.chat.id, reply_to_msg_id)
         asyncio.create_task(at_command(app, try_this, 0, random.random()))
         return
 
-    if no_random:
+    if hash_sign:
         return
 
     if await imply_chain.random_reply(app, message, reply_to_possibility):
