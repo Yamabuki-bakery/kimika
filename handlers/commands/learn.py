@@ -28,7 +28,7 @@ async def learn(client: pyrogram.Client, message: pyrogram.types.Message):
         if reply_to_msg_id is None:
             raise ValueError('沒有 reply 到一條 msg 上！')
 
-        matches = re.search(r'learn (\S+)', message_text)
+        matches = re.search(r'learn ([\S ]+)$', message_text)
 
         if matches:
             keyword = matches[1]
