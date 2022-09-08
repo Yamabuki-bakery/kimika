@@ -107,6 +107,7 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
 
 @anti_replay
 async def invoke_imply(client: pyrogram.Client, message: pyrogram.types.Message):
+    logging.info(f'[invoke_imply] comming [{message.text or message.caption or ""}]')
     (reply_to_possibility, reply_to_msg_id) = (0.75, message.reply_to_message.id) if message.reply_to_message else (
         -1, None)
     asyncio.create_task(imply_chain_func(
