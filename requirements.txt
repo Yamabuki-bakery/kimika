@@ -5,3 +5,4 @@ aiohttp
 eyeD3
 DateTime
 aiosqlite
+mutagen
