@@ -11,7 +11,12 @@ from . import imply_chain
 
 
 @anti_replay
-async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, again: int = 1, *args):
+async def no_imply_at_command(client: pyrogram.Client, message: pyrogram.types.Message):
+    await at_command(client, message, no_imply=True)
+
+
+@anti_replay
+async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, again: int = 1, *args, **kwargs):
     app = client
     (reply_to_possibility, reply_to_msg_id) = (0.75, message.reply_to_message.id) if message.reply_to_message else (
         -1, None)
@@ -86,6 +91,9 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
 
 
     else:
+        if kwargs.get('no_imply'):
+            return
+
         asyncio.create_task(imply_chain_func(
             client=client,
             message=message,
@@ -97,12 +105,27 @@ async def at_command(client: pyrogram.Client, message: pyrogram.types.Message, a
         # message.stop_propagation()
 
 
+@anti_replay
+async def invoke_imply(client: pyrogram.Client, message: pyrogram.types.Message):
+    (reply_to_possibility, reply_to_msg_id) = (0.75, message.reply_to_message.id) if message.reply_to_message else (
+        -1, None)
+    asyncio.create_task(imply_chain_func(
+        client=client,
+        message=message,
+        reply_to_possibility=1,
+        reply_to_msg_id=reply_to_msg_id,
+        again=0,
+        no_random=True,
+    ))
+
+
 async def imply_chain_func(**kwargs):
-    app = kwargs['client']
-    message = kwargs['message']
-    reply_to_possibility = kwargs['reply_to_possibility']
-    reply_to_msg_id = kwargs['reply_to_msg_id']
-    again = kwargs['again']
+    app = kwargs.get('client')
+    message = kwargs.get('message')
+    reply_to_possibility = kwargs.get('reply_to_possibility')
+    reply_to_msg_id = kwargs.get('reply_to_msg_id')
+    again = kwargs.get('again')
+    no_random = kwargs.get('no_random')
 
     if await imply_chain.reaction(app, message):
         return
@@ -120,6 +143,9 @@ async def imply_chain_func(**kwargs):
         logging.info(f'[at_command] No command found, try the replied message again')
         try_this = await app.get_messages(message.chat.id, reply_to_msg_id)
         asyncio.create_task(at_command(app, try_this, 0, random.random()))
+        return
+
+    if no_random:
         return
 
     if await imply_chain.random_reply(app, message, reply_to_possibility):

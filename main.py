@@ -46,6 +46,18 @@ async def bot_init():
         filters.incoming & (filters.regex(r'(@?[kK]imika)|([きキｷ希][みミﾐ実][かカｶ香])') | filters.mentioned),
     ), group=-1)
 
+    # kimika command with no imply
+    global_var.app.add_handler(pyrogram.handlers.MessageHandler(
+        handlers.handler_command.no_imply_at_command,
+        filters.incoming & filters.regex(r'^_'),
+    ), group=-1)
+
+    # kimika imply with no command
+    global_var.app.add_handler(pyrogram.handlers.MessageHandler(
+        handlers.handler_command.invoke_imply,
+        filters.incoming & filters.regex(r'#'),
+    ), group=-1)
+
     # 驗證通過 / 錯誤反饋
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.new_member_welcome,
