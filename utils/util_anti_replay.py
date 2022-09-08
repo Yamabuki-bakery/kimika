@@ -56,7 +56,7 @@ def hash_query(client: pyrogram.Client, handler: object, message: pyrogram.types
 
     kwargv = ''
     for key in kwargs:
-        kwargv += key + kwargs[key]
+        kwargv += str(key) + str(kwargs[key])
 
     return hash(client.name) ^ hash(argv) ^ hash(kwargv) ^ hash(handler) ^ hash(message.chat.id) ^ hash(message.id << 32)
     # return hash(client.name + str(id(handler)) + str(message.id) + str(message.chat.id) + str(argv))
