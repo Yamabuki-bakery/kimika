@@ -158,6 +158,9 @@ async def wipe(app: pyrogram.Client, message: pyrogram.types.Message, rtp: float
 
         try:
             target_member = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
+            if target_member.chat is not None:
+                # in case of chat member banned
+                raise pyrogram.errors.UserNotParticipant
             if target_member.user.is_self:
                 raise ValueError(f'[wipe] 此人 {get_sender_name(message)} 嘗試橄欖 kimika')
         except pyrogram.errors.UserNotParticipant:
@@ -231,6 +234,9 @@ async def kick(app: pyrogram.Client, message: pyrogram.types.Message, rtp: float
 
         try:
             target_member = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
+            if target_member.chat is not None:
+                # in case of chat member banned
+                raise pyrogram.errors.UserNotParticipant
             if target_member.user.is_self:
                 raise ValueError(f'[kick] 此人 {get_sender_name(message)} 嘗試橄欖 kimika')
         except pyrogram.errors.UserNotParticipant:
