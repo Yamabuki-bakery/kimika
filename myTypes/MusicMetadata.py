@@ -22,6 +22,8 @@ class netease_metadata:
         self.vip = data['vip']
         self.duration = data['duration']
         self.lyric = data['lyric']
+        if not self.title:
+            raise ValueError("[netease_metadata__init] The title in metadata in None!")
 
 
 class bili_metadata:
