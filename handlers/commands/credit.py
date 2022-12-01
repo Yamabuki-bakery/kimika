@@ -1,6 +1,7 @@
 import asyncio
 import json
 import pyrogram
+import global_var
 
 from utils.util_tg_operation import speak, get_user_credit, get_sender_id, get_chat_credit
 
@@ -14,6 +15,15 @@ async def credit(app: pyrogram.Client, message: pyrogram.types.Message, rtp: flo
 
     else:
         target_id = get_sender_id(message)
+
+    # Require killer for getting credit of other users
+    if target_id != get_sender_id(message):
+        killerDao = global_var.db.killerDao
+        if not killerDao.check_killer(get_sender_id(message), message.chat.id):
+            err_msg = (await speak(message.chat.id, '你需要是 Killer 才能執行該命令'))[0]
+            await asyncio.sleep(10)
+            await app.delete_messages(message.chat.id, err_msg.id)
+            return
 
     if target_id > 0:
         credit_info = await get_user_credit(target_id, message.chat.id)
