@@ -19,7 +19,7 @@ async def credit(app: pyrogram.Client, message: pyrogram.types.Message, rtp: flo
     # Require killer for getting credit of other users
     if target_id != get_sender_id(message):
         killerDao = global_var.db.killerDao
-        if not killerDao.check_killer(get_sender_id(message), message.chat.id):
+        if not await killerDao.check_killer(get_sender_id(message), message.chat.id):
             err_msg = (await speak(message.chat.id, '你需要是 Killer 才能執行該命令'))[0]
             await asyncio.sleep(10)
             await app.delete_messages(message.chat.id, err_msg.id)
