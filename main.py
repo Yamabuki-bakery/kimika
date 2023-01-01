@@ -95,6 +95,15 @@ async def bot_init():
         filters.incoming & filters.group & filters.new_chat_members
     ), group=1)
 
+    def new_chat_member_joined_filter(_, __, update: pyrogram.types.ChatMemberUpdated) -> bool:
+        print(update)
+        print((update.old_chat_member is None) and (update.new_chat_member is not None))
+        return (update.old_chat_member is None) and (update.new_chat_member is not None)
+
+    global_var.app.add_handler(pyrogram.handlers.ChatMemberUpdatedHandler(
+        handlers.new_member_update,
+        filters.create(new_chat_member_joined_filter)
+    ), group=1)
     await pyrogram.idle()
 
 
