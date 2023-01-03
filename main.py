@@ -73,7 +73,7 @@ async def bot_init():
     # 踢不加群就發言的人
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.galgroup_non_member_msg_abuse,
-        filters.incoming & filters.chat(GALGROUP)
+        filters.incoming & filters.chat(GALGROUP) & (~ filters.me)
     ), group=-2)
 
     # 拉伸手黨到萊茵圖書館
@@ -92,7 +92,7 @@ async def bot_init():
 
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.verify_new_member,
-        filters.incoming & filters.group & filters.new_chat_members
+        filters.incoming & filters.group & filters.new_chat_members  & (~ filters.me)
     ), group=1)
 
     def new_chat_member_joined_filter(_, __, update: pyrogram.types.ChatMemberUpdated) -> bool:
