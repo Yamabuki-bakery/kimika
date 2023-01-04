@@ -43,19 +43,19 @@ async def bot_init():
     # kimika command
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.handler_command.at_command,
-        filters.incoming & (filters.regex(r'(@?[kK]imika)|([きキｷ希][みミﾐ実][かカｶ香])') | filters.mentioned),
+        filters.incoming & (filters.regex(r'(@?[kK]imika)|([きキｷ希][みミﾐ実][かカｶ香])') | filters.mentioned) & (~ filters.me),
     ), group=-1)
 
     # kimika command with no imply
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.handler_command.no_imply_at_command,
-        filters.incoming & filters.regex(r'^_'),
+        filters.incoming & filters.regex(r'^_') & (~ filters.me),
     ), group=-1)
 
     # kimika imply with no command
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.handler_command.invoke_imply,
-        filters.incoming & filters.regex(r'#'),
+        filters.incoming & filters.regex(r'#') & (~ filters.me),
     ), group=-1)
 
     # 驗證通過 / 錯誤反饋
@@ -87,12 +87,12 @@ async def bot_init():
     # smart deal
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.smart_deal,
-        filters.incoming & filters.text
+        filters.incoming & filters.text & (~ filters.me)
     ), group=2)
 
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
         handlers.verify_new_member,
-        filters.incoming & filters.group & filters.new_chat_members  & (~ filters.me)
+        filters.incoming & filters.group & filters.new_chat_members & (~ filters.me)
     ), group=1)
 
     def new_chat_member_joined_filter(_, __, update: pyrogram.types.ChatMemberUpdated) -> bool:
