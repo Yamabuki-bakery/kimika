@@ -15,9 +15,12 @@ async def galgroup_non_member_msg_abuse(client: pyrogram.Client, message: pyrogr
     app = client
     # logging.info(message)
     if message.reply_to_message:
-        # see the msg replies to which another one as legal.
+        # should check if it is replied to a thread belongs to channel discussion
         # logging.info(f'💤 Message {message.id} replied to msg {message.reply_to_message_id}, ignoring')
-        return
+        assumed_thread_head_id = message.reply_to_top_message_id or message.reply_to_message_id
+        assumed_thread_head_msg: pyrogram.types.Message = await app.get_messages(message.chat.id, assumed_thread_head_id)
+        if assumed_thread_head_msg.sender_chat is not None and assumed_thread_head_msg.sender_chat.id == -1001140043836:
+            return
 
     if not message.from_user:
         # see the msg sent by non-user as legal
