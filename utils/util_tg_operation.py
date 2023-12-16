@@ -20,6 +20,7 @@ from utils.util_media_metatag import apply_metadata
 
 FILE_ID_CACHE = {}
 
+NEW_ACCOUNT_ID = 6500000000
 
 async def speak(chat_id: int, msg_choices: (str, list), reply_to_msg_id: int = None):
     app = global_var.app
@@ -268,7 +269,7 @@ async def get_user_credit(user: int | pyrogram.types.User, chatid: int = None, i
         full_user_info = await app.invoke(functions.users.GetFullUser(id=await app.resolve_peer(userid)))
 
         result.photo = True if user_info.photo else False
-        result.new_account = userid > 5000000000
+        result.new_account = userid > NEW_ACCOUNT_ID
         result.username = user_info.username if user_info.username else None
         result.bio = full_user_info.full_user.about if full_user_info.full_user.about else None
         if user_info.is_deleted:
@@ -278,7 +279,7 @@ async def get_user_credit(user: int | pyrogram.types.User, chatid: int = None, i
             logging.warning(f'[get_user_credit] Peer ID invalid for unknown reason! Ignoring, the bio is unavailable')
             result.bio = None
             result.photo = True if user.photo else False
-            result.new_account = userid > 5000000000
+            result.new_account = userid > NEW_ACCOUNT_ID
             result.username = user.username if user.username else None
         else:
             logging.error('[get_user_credit] 過於惡俗！Peer ID invalid for unknown reason!')
@@ -350,7 +351,7 @@ async def get_chat_credit(chat: int | pyrogram.types.Chat, chatid: int = None, i
             logging.warning(f'[get_chat_credit] Peer ID invalid for unknown reason! Ignoring, the bio is unavailable')
             result.bio = None
             result.photo = True if chat.photo else False
-            result.new_account = userid > 6500000000
+            result.new_account = userid > NEW_ACCOUNT_ID
             result.username = chat.username if chat.username else None
         else:
             logging.error('[get_chat_credit] 過於惡俗！Peer ID invalid for unknown reason!')
