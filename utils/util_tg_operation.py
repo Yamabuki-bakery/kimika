@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import pyrogram
 import pyrogram.errors
 from pyrogram.raw import functions
+from pyrogram.enums.parse_mode import ParseMode
 
 import global_var
 import myTypes.MusicMetadata
@@ -51,7 +52,7 @@ async def speak(chat_id: int, msg_choices: (str, list), reply_to_msg_id: int = N
                 mediaid = FILE_ID_CACHE[cacheid].split('/')[1]
                 returns.append(await app.send_animation(chat_id, mediaid, reply_to_message_id=reply_to_msg_id))
             else:
-                returns.append(await app.send_message(chat_id, msg, reply_to_message_id=reply_to_msg_id))
+                returns.append(await app.send_message(chat_id, msg, reply_to_message_id=reply_to_msg_id, parse_mode=ParseMode.MARKDOWN))
         except (KeyError, pyrogram.errors.FileReferenceExpired):
             logging.warning(f'[Send Media] File reference invalid')
             mediaid = (await find_file_id(msg)).split('/')[1]
@@ -349,7 +350,7 @@ async def get_chat_credit(chat: int | pyrogram.types.Chat, chatid: int = None, i
             logging.warning(f'[get_chat_credit] Peer ID invalid for unknown reason! Ignoring, the bio is unavailable')
             result.bio = None
             result.photo = True if chat.photo else False
-            result.new_account = userid > 5000000000
+            result.new_account = userid > 6500000000
             result.username = chat.username if chat.username else None
         else:
             logging.error('[get_chat_credit] 過於惡俗！Peer ID invalid for unknown reason!')

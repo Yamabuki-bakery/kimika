@@ -16,6 +16,7 @@ async def member(app: pyrogram.Client, message: pyrogram.types.Message, rtp: flo
         target_id = get_sender_id(message)
     try:
         member_info = await app.get_chat_member(chat_id=message.chat.id, user_id=target_id)
+        member_info = f"```json\n{member_info}\n```"
     except pyrogram.errors.UserNotParticipant:
         member_info = "Not a member of this group"
 

@@ -1,6 +1,20 @@
 import aiosqlite
-
+import opencc
+import pangu
 from myTypes.LearningRecord import LearningRecord
+
+t2s_converter = opencc.OpenCC('t2s.json')
+
+
+def normalize_keyword(keyword: str) -> str:
+    # convert to lower case and strip
+    # convert Chinese to simplified Chinese use opencc
+    # add space between Chinese and English use pangu
+
+    keyword = keyword.lower().strip()
+    keyword = t2s_converter.convert(keyword)
+    keyword = pangu.spacing(keyword)
+    return keyword
 
 
 class LearningDao:
@@ -27,8 +41,9 @@ class LearningDao:
             return []
 
         longest_kw_len = 0
+        keyword = normalize_keyword(keyword)
         for row in rows:
-            if row[5].lower() in keyword.lower():
+            if row[5] in keyword:
                 if len(row[5]) > longest_kw_len:
                     longest_kw_len = len(row[5])
                     results = [gen_learning_record(row)]
@@ -38,6 +53,7 @@ class LearningDao:
         return results
 
     async def set_answer(self, learning_record: LearningRecord):
+        keyword = normalize_keyword(learning_record.keyword)
         await self.__kimikaDB.execute(
             'INSERT INTO learning('
             'fromChatId, '
@@ -51,7 +67,7 @@ class LearningDao:
              learning_record.caller_user_id,
              learning_record.caller_chat_id,
              learning_record.answer_msg_id,
-             learning_record.keyword,
+             keyword,
              learning_record.learnt_resp_msg_id,
              learning_record.auto_trigger
              )

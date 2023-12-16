@@ -23,7 +23,7 @@ async def redirect_to_rhine(client: pyrogram.Client, message: pyrogram.types.Mes
         ask_msg = await app.send_message(chat_id=message.chat.id, text=resp2channel, reply_to_message_id=message.id)
 
     await asyncio.sleep(60)
-    if (message.text and len(message.text) > 20) or message.caption:
+    if True:  # (message.text and len(message.text) > 20) or message.caption:
         pass
     else:
         await app.delete_messages(chat_id=message.chat.id, message_ids=[ask_msg.id, message.id])

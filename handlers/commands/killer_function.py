@@ -18,14 +18,22 @@ class UniUser:
         self.uid = uid
         if uid > 0:
             self.type = 0
-            info: pyrogram.types.User = await global_var.app.get_users(uid)
-            self.display_name = info.first_name
-            self.username = info.username
+            try:
+                info: pyrogram.types.User = await global_var.app.get_users(uid)
+                self.display_name = info.first_name
+                self.username = info.username
+            except Exception:
+                self.display_name = f'Unknown User ({uid})'
+                self.username = None
         else:
             self.type = 1
-            info: pyrogram.types.Chat = await global_var.app.get_chat(uid)
-            self.display_name = info.title
-            self.username = info.username
+            try:
+                info: pyrogram.types.Chat = await global_var.app.get_chat(uid)
+                self.display_name = info.title
+                self.username = info.username
+            except Exception:
+                self.display_name = f'Unknown Chat ({uid})'
+                self.username = None
 
 
 async def killer_list(app: pyrogram.Client, message: pyrogram.types.Message):

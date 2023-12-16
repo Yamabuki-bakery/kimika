@@ -29,6 +29,8 @@ async def credit(app: pyrogram.Client, message: pyrogram.types.Message, rtp: flo
         credit_info = await get_user_credit(target_id, message.chat.id)
     else:
         credit_info = await get_chat_credit(target_id, message.chat.id)
-    debug_msg = (await speak(message.chat.id, json.dumps(credit_info.__dict__, indent=2, ensure_ascii=False)))[0]
+
+    message_to_send = f"```json\n{json.dumps(credit_info.__dict__, indent=2, ensure_ascii=False)}\n```"
+    debug_msg = (await speak(message.chat.id, message_to_send))[0]
     await asyncio.sleep(90)
     await app.delete_messages(message.chat.id, debug_msg.id)
