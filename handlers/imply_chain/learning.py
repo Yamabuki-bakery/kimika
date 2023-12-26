@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 
@@ -27,6 +28,13 @@ async def learning(client: pyrogram.Client, message: pyrogram.types.Message, twi
     learning_record: LearningRecord = random.choice(learning_records)
 
     answer_msg = await client.get_messages(botConfig.KIMIKACACHE, learning_record.answer_msg_id)
+    if answer_msg.empty:
+        logging.warning(f'[learning] {learning_record.answer_msg_id} not found in cache! maybe deleted')
+        await learningDao.del_answer(message.chat.id, learning_record.learnt_resp_msg_id)
+        logging.info(f'[learning] {learning_record.answer_msg_id} {learning_record.keyword} deleted from db')
+        asyncio.create_task(client.delete_messages(message.chat.id, learning_record.learnt_resp_msg_id))
+        return await learning(client, message)
+
     if reply_to_msg_id:
         await answer_msg.copy(message.chat.id, reply_to_message_id=reply_to_msg_id)
     else:
@@ -36,7 +44,7 @@ async def learning(client: pyrogram.Client, message: pyrogram.types.Message, twi
 
 async def forget(client: pyrogram.Client, message: pyrogram.types.Message) -> bool:
     (reply_to_possibility, reply_to_msg_id) = (1, message.reply_to_message.id) if message.reply_to_message else (
-    -1, None)
+        -1, None)
     learningDao = global_var.db.learningDao
     message_text: str = message.text or message.caption or ""
     message_text = message_text.encode('UTF-8').decode('UTF-8')
