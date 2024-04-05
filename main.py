@@ -77,12 +77,12 @@ async def bot_init():
     ), group=-2)
 
     # 拉伸手黨到萊茵圖書館
-    global_var.app.add_handler(pyrogram.handlers.MessageHandler(
-        handlers.redirect_to_rhine,
-        filters.incoming &
-        filters.chat(GALGROUP) &
-        filters.regex(r'((有[沒木没]有)|([问問求])).*(([资資]源)|(下[载載])|([那這这一][个個])|(游戏)|(遊戲)|(合集))')
-    ), group=3)
+    # global_var.app.add_handler(pyrogram.handlers.MessageHandler(
+    #     handlers.redirect_to_rhine,
+    #     filters.incoming &
+    #     filters.chat(GALGROUP) &
+    #     filters.regex(r'((有[沒木没]有)|([问問求])).*(([资資]源)|(下[载載])|([那這这一][个個])|(游戏)|(遊戲)|(合集))')
+    # ), group=3)
 
     # smart deal
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(

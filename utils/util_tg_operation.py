@@ -176,7 +176,7 @@ async def send_song(song_id: int, chat_id: int):
     try:
         audio_data = await download_mp3_task
         caption = ''
-        filename = 'music.mp3'
+        filename = f'music-{song_id}.mp3'
         this_metadata = n_metadata
     except Exception as err:
         logging.warning(f'🎵[download_mp3_task] Netease mp3 - something went wrong! {err} using bilibili instead!')
@@ -192,7 +192,7 @@ async def send_song(song_id: int, chat_id: int):
         try:
             audio_data = await bili_music.download_audio(best_result)
             caption = '🅱'
-            filename = f'music.{best_result.format}'
+            filename = f'music-{song_id}.{best_result.format}'
             this_metadata = best_result
         except Exception as err:
             logging.error(f'🎵[bili_music_download] Cannot download audio file! {err}')
