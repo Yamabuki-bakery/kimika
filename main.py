@@ -59,10 +59,10 @@ async def bot_init():
     ), group=-1)
 
     # 驗證通過 / 錯誤反饋
-    # global_var.app.add_handler(pyrogram.handlers.MessageHandler(
-    #     handlers.new_member_welcome,
-    #     filters.incoming & filters.user(1148507346) & filters.regex(r'((超时未验证)|(通过了验证)|(验证错误))')
-    # ), group=-1)
+    global_var.app.add_handler(pyrogram.handlers.MessageHandler(
+        handlers.new_member_welcome,
+        filters.incoming & filters.user(1148507346) & filters.regex(r'((超时未验证)|(通过了验证)|(验证错误))')
+    ), group=-1)
 
     # 返回文件 ID
     global_var.app.add_handler(pyrogram.handlers.MessageHandler(
