@@ -16,10 +16,16 @@ async def random_reply(client: pyrogram.Client, message: pyrogram.types.Message,
         random_record: LearningRecord = random.choice(random_records)
         answer_msg = await client.get_messages(KIMIKACACHE, random_record.answer_msg_id)
         if reply_to_msg_id:
-            await answer_msg.copy(message.chat.id, reply_to_message_id=reply_to_msg_id)
-        else:
             await answer_msg.copy(message.chat.id,
-                                  reply_to_message_id=message.id if random.random() < reply_to_possibility else None)
+                                  reply_to_message_id=reply_to_msg_id,
+                                  reply_to_chat_id=message.reply_to_message.chat.id
+                                  )
+        else:
+            _if_reply = random.random() < reply_to_possibility
+            await answer_msg.copy(message.chat.id,
+                                  reply_to_message_id=message.id if _if_reply else None,
+                                  reply_to_chat_id=message.chat.id if _if_reply else None
+                                  )
 
     else:
         reply_list = NOTHING_REPLY_LIST

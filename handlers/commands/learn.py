@@ -46,10 +46,17 @@ async def learn(client: pyrogram.Client, message: pyrogram.types.Message):
 
     # let's learn!
     try:
-        answer_msg = await client.get_messages(chat_id=message.chat.id, message_ids=reply_to_msg_id)
+        answer_msg = await client.get_messages(chat_id=message.reply_to_message.chat.id, message_ids=reply_to_msg_id)
         cached_msg = await answer_msg.forward(botConfig.KIMIKACACHE)
 
-        learnt_resp_msg = await answer_msg.reply_text(f'{keyword}，\n我董力！ 😘')
+        # learnt_resp_msg = await answer_msg.reply_text(f'{keyword}，\n我董力！ 😘')
+        # this should become invalid since the answer message may come from a foreign chat
+        learnt_resp_msg = await client.send_message(
+            chat_id=message.chat.id,
+            text=f'{keyword}，\n我董力！ 😘',
+            reply_to_message_id=reply_to_msg_id,
+            reply_to_chat_id=answer_msg.chat.id
+        )
 
         learning_record = LearningRecord()
         learning_record.answer_msg_id = cached_msg.id

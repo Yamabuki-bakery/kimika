@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO,
 
 
 async def bot_init():
-    logging.info('bot_init')
+    logging.info(f'bot_init - Pyrogram version {pyrogram.__version__}')
 
     # https://docs.pyrogram.org/
     global_var.app = pyrogram.Client(

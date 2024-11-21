@@ -36,7 +36,10 @@ async def learning(client: pyrogram.Client, message: pyrogram.types.Message, twi
         return await learning(client, message)
 
     if reply_to_msg_id:
-        await answer_msg.copy(message.chat.id, reply_to_message_id=reply_to_msg_id)
+        await answer_msg.copy(chat_id=message.chat.id,
+                              reply_to_message_id=reply_to_msg_id,
+                              reply_to_chat_id=message.reply_to_message.chat.id
+                              )
     else:
         await answer_msg.forward(message.chat.id)
     return True

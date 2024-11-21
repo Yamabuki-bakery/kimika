@@ -59,7 +59,7 @@ async def reaction(app: pyrogram.Client, message: pyrogram.types.Message) -> boo
     target_msg_list: list[pyrogram.types.Message] = []
 
     limit = len(reaction_list)
-    async for message in app.search_messages(message.chat.id, from_user=target_id):
+    async for message in app.search_messages(message.reply_to_message.chat.id, from_user=target_id):
         if message.id <= start_from_msg_id:
             target_msg_list.append(message)
             limit -= 1
@@ -72,10 +72,12 @@ async def reaction(app: pyrogram.Client, message: pyrogram.types.Message) -> boo
     for i in range(0, count):
         try:
             await target_msg_list[i].react(reaction_list[i], True)
+            # await app.send_reaction(target_msg_list[i].chat.id, target_msg_list[i].id, reaction_list[i], True)
             await asyncio.sleep(0.5)
         except pyrogram.errors.FloodWait:
             await asyncio.sleep(5)
-        except pyrogram.errors.RPCError:
+        except pyrogram.errors.RPCError as e:
+            logging.error(f'[reaction] {e}')
             continue
 
     return True

@@ -4,7 +4,9 @@ import re
 from utils.util_tg_operation import send_song
 
 
-async def netease_link(client: pyrogram.Client, message: pyrogram.types.Message, rtp: float) -> bool:
+async def netease_link(client: pyrogram.Client, message: pyrogram.types.Message,
+                       from_origin_chat: pyrogram.types.Chat
+                       ) -> bool:
     message_text: str = message.text or message.caption or ""
     results = re.search(r'song[A-Za-z?/=#]{0,9}(\d{1,12})', message_text)
     if results is not None:
@@ -17,7 +19,7 @@ async def netease_link(client: pyrogram.Client, message: pyrogram.types.Message,
             song_id = None
 
     if song_id:
-        await send_song(int(song_id), message.chat.id)
+        await send_song(int(song_id), from_origin_chat.id)
         return True
     else:
         return False
