@@ -158,10 +158,7 @@ async def imply_chain_func(
     if await imply_chain.learning(app, message, again == 0):
         return
 
-    if hash_sign and again == 0:
-        return
-
-    if reply_to_msg is not None:
+    if again != 0 and reply_to_msg is not None and not hash_sign:
         logging.info(f'[at_command] No command found, try the replied message again')
         try:
             try_this = await app.get_messages(
@@ -173,6 +170,9 @@ async def imply_chain_func(
             logging.error(f'[at_command] {e}')
         finally:
             return
+
+    if hash_sign:
+        return
 
     if await imply_chain.random_reply(app, message, reply_to_possibility):
         return
